@@ -118,40 +118,48 @@
 
   .nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
-  .readiness-badge{
+  .system-status-badge{
     display:inline-flex;align-items:center;gap:7px;padding:5px 12px;
     border-radius:100px;font-size:12.5px;font-weight:600;
-    background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;
-    transition:all .25s ease;cursor:default;user-select:none;
+    background:var(--card);border:1px solid var(--line);color:var(--ink-soft);
+    cursor:pointer;transition:all .2s ease;user-select:none;
   }
-  .readiness-badge.ready{
+  .system-status-badge:hover{
+    border-color:var(--seal);color:var(--seal);box-shadow:var(--shadow-sm);
+  }
+  .system-status-badge .status-dot{
+    width:7.5px;height:7.5px;border-radius:50%;background:#94A3B8;flex-shrink:0;
+    transition:all .2s ease;
+  }
+  .system-status-badge.status-live{
     border-color:var(--seal);color:var(--seal);background:var(--seal-wash);
   }
-  .readiness-dot{
-    width:7.5px;height:7.5px;border-radius:50%;background:#D97706;
-    animation:readinessPulse 1.4s ease-in-out infinite;
+  .system-status-badge.status-live .status-dot{
+    background:var(--seal);box-shadow:0 0 0 2px rgba(14,106,78,0.22);
   }
-  .readiness-badge.ready .readiness-dot{
-    background:var(--seal);animation:none;box-shadow:0 0 0 2px rgba(14,106,78,0.22);
+  .system-status-badge.status-local{
+    border-color:var(--gold);color:var(--gold);background:var(--gold-wash);
+  }
+  .system-status-badge.status-local .status-dot{
+    background:var(--gold);
+  }
+  .system-status-badge.status-init{
+    border-color:#F59E0B;color:#92400E;background:#FEF3C7;
+  }
+  .system-status-badge.status-init .status-dot{
+    background:#D97706;animation:readinessPulse 1.4s ease-in-out infinite;
+  }
+  .system-status-badge.status-error{
+    border-color:#EF4444;color:#B91C1C;background:#FEF2F2;
+  }
+  .system-status-badge.status-error .status-dot{
+    background:#EF4444;
   }
   @keyframes readinessPulse{
     0%{transform:scale(0.9);opacity:0.6}
     50%{transform:scale(1.3);opacity:1}
     100%{transform:scale(0.9);opacity:0.6}
   }
-
-  .engine-badge{
-    display:inline-flex;align-items:center;gap:7px;padding:5px 12px;
-    border-radius:100px;font-size:12.5px;font-weight:600;
-    background:var(--card);border:1px solid var(--line);color:var(--ink-soft);
-    cursor:pointer;transition:all .15s ease;
-  }
-  .engine-badge:hover{border-color:var(--seal);color:var(--seal)}
-  .engine-badge .dot{width:7.5px;height:7.5px;border-radius:50%;background:#94A3B8}
-  .engine-badge.active-live{border-color:var(--seal);color:var(--seal);background:var(--seal-wash)}
-  .engine-badge.active-live .dot{background:var(--seal);box-shadow:0 0 0 2px rgba(14,106,78,0.22)}
-  .engine-badge.active-local{border-color:var(--gold);color:var(--gold);background:var(--gold-wash)}
-  .engine-badge.active-local .dot{background:var(--gold)}
 
   .btn-settings{
     border:1px solid var(--line);background:var(--card);border-radius:var(--radius-sm);
@@ -177,6 +185,14 @@
   .btn-new-chat:hover{
     background:var(--seal);color:#FFFFFF;box-shadow:0 2px 8px rgba(14,106,78,0.22);
   }
+  .btn-delete-chat{
+    border:1px solid #fecaca;background:#fff5f5;border-radius:var(--radius-sm);
+    padding:6px 12px;font:inherit;font-size:13px;font-weight:600;color:#dc2626;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:all .2s ease;
+  }
+  .btn-delete-chat:hover{
+    background:#dc2626;color:#FFFFFF;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,0.25);
+  }
 
 
   .lang{display:flex;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:var(--card)}
@@ -186,8 +202,8 @@
 
   /* Titles */
   h1{
-    font:500 clamp(24px,4vw,34px)/1.26 Georgia,"Noto Serif Devanagari",serif;
-    margin:0 0 6px;letter-spacing:-.015em;max-width:26ch;
+    font:650 clamp(23px,3.8vw,31px)/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Inter","Helvetica Neue",Arial,sans-serif;
+    margin:0 0 6px;letter-spacing:-.015em;max-width:28ch;
   }
   .sub{color:var(--ink-soft);margin:0 0 24px;max-width:68ch;font-size:15px;line-height:1.6}
 
@@ -291,7 +307,10 @@
     border-radius: 8px;
     background: var(--seal-wash);
     border: 1px solid #C4E2D7;
-    font-size: 22px;
+    font-size: 13px;
+    font-weight: 750;
+    color: var(--seal);
+    letter-spacing: 0.05em;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -386,7 +405,7 @@
     margin-bottom: 4px;
   }
   .marketplace-title {
-    font: 600 clamp(19px, 3vw, 23px)/1.3 Georgia, "Noto Serif Devanagari", serif;
+    font: 650 clamp(18px, 2.8vw, 22px)/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
     color: var(--ink);
     margin: 0 0 6px;
     display: flex;
@@ -498,12 +517,15 @@
     margin-bottom: 9px;
   }
   .agent-avatar-box {
-    width: 38px;
+    width: 42px;
     height: 38px;
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--seal-wash);
     border: 1px solid #C4E2D7;
-    font-size: 19px;
+    font-size: 11.5px;
+    font-weight: 750;
+    color: var(--seal);
+    letter-spacing: 0.04em;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -743,6 +765,100 @@
     from{opacity:0;transform:translateY(8px)}
     to{opacity:1;transform:translateY(0)}
   }
+
+  /* Thread Header & Deletion Controls */
+  .chat-thread-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 16px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius-sm);margin-bottom:8px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.03);animation:fadeInUp 0.25s ease;
+  }
+  .thread-info{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink)}
+  .thread-pulse-dot{
+    width:9px;height:9px;border-radius:50%;background:var(--seal);
+    box-shadow:0 0 0 3px rgba(14,106,78,0.2);animation:pulseDot 2s infinite;
+  }
+  @keyframes pulseDot{
+    0%{box-shadow:0 0 0 0 rgba(14,106,78,0.4)}
+    70%{box-shadow:0 0 0 6px rgba(14,106,78,0)}
+    100%{box-shadow:0 0 0 0 rgba(14,106,78,0)}
+  }
+  .btn-thread-delete{
+    background:transparent;border:1px solid #fecaca;border-radius:var(--radius-sm);
+    padding:5px 12px;font:inherit;font-size:12px;font-weight:600;color:#dc2626;cursor:pointer;
+    display:inline-flex;align-items:center;gap:5px;transition:all .2s ease;
+  }
+  .btn-thread-delete:hover{
+    background:#dc2626;color:#ffffff;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,0.25);
+  }
+
+  .meta-right-actions{
+    margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-turn-action{
+    background:transparent;border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:3px 9px;font:inherit;font-size:11.5px;color:var(--ink-soft);cursor:pointer;
+    display:inline-flex;align-items:center;gap:4px;transition:all .15s ease;
+  }
+  .btn-turn-action:hover{
+    background:var(--card);color:var(--ink);border-color:var(--ink-subtle);
+  }
+  .btn-turn-action.btn-turn-delete:hover{
+    background:#fff5f5;color:#dc2626;border-color:#fca5a5;
+  }
+
+  .user-query-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .btn-bubble-delete{
+    background:transparent;border:none;color:rgba(255,255,255,0.7);cursor:pointer;
+    font-size:12px;padding:2px 5px;border-radius:4px;opacity:0.5;transition:all .15s ease;
+  }
+  .user-bubble:hover .btn-bubble-delete{opacity:1}
+  .btn-bubble-delete:hover{background:rgba(0,0,0,0.25);color:#fff}
+
+  /* Progressive Typing Effect & Controls */
+  .typing-cursor{
+    display:inline-block;width:3px;height:16px;background:var(--seal);
+    vertical-align:text-bottom;margin-left:2px;border-radius:1px;
+    animation:blinkCursor 0.7s infinite;
+  }
+  @keyframes blinkCursor{
+    0%,100%{opacity:1}
+    50%{opacity:0}
+  }
+  .typing-ctrl{
+    margin-top:12px;display:flex;align-items:center;gap:8px;
+  }
+  .btn-skip-typing{
+    background:var(--seal-wash);border:1px solid #c4e2d7;border-radius:var(--radius-sm);
+    padding:4px 10px;font-size:11.5px;font-weight:600;color:var(--seal-deep);cursor:pointer;
+    display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease;
+  }
+  .btn-skip-typing:hover{
+    background:var(--seal);color:#fff;border-color:var(--seal);
+  }
+  .answer-content.typing-active{cursor:pointer}
+
+  /* Fade out shrink for message deletion */
+  .fade-out-shrink{
+    transition:all 0.25s ease-out !important;
+    opacity:0 !important;
+    transform:translateY(-8px) scale(0.98) !important;
+    max-height:0 !important;
+    margin-bottom:0 !important;
+    overflow:hidden !important;
+    padding-top:0 !important;
+    padding-bottom:0 !important;
+  }
+
+  /* Toast Notification */
+  .toast-notification{
+    position:fixed;bottom:28px;right:28px;background:#18201D;color:#fff;
+    padding:12px 20px;border-radius:8px;font-size:13.5px;font-weight:500;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);display:flex;align-items:center;gap:10px;
+    z-index:99999;opacity:0;transform:translateY(12px);
+    transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1);pointer-events:none;border-left:4px solid var(--seal);
+  }
+  .toast-notification.show{opacity:1;transform:translateY(0)}
 
   /* Dynamic Follow-up Suggestions Section */
   .follow-up-section{
@@ -1226,40 +1342,28 @@
 
   footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-soft);font-size:12.5px;line-height:1.6}
 
-  /* Constantly Changing Dark Gradient Theme */
-  @keyframes animatedDarkGradient {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
-  html.dark-mode {
-    background: #050811 !important;
-  }
-
+  /* Genuine Official Dark Mode (No flashy animated gradient) */
   html.dark-mode,
   body.dark-mode {
-    --ink: #F8FAFC;
+    --ink: #F1F5F9;
     --ink-soft: #94A3B8;
     --ink-subtle: #64748B;
-    --paper: #070B14;
-    --card: rgba(15, 23, 42, 0.88);
+    --paper: #0B132B;
+    --card: #151E33;
     --seal: #10B981;
-    --seal-wash: rgba(16, 185, 129, 0.18);
+    --seal-wash: rgba(16, 185, 129, 0.14);
     --seal-deep: #059669;
     --gold: #FBBF24;
-    --gold-wash: rgba(251, 191, 36, 0.16);
-    --gold-border: rgba(251, 191, 36, 0.35);
+    --gold-wash: rgba(251, 191, 36, 0.12);
+    --gold-border: rgba(251, 191, 36, 0.3);
     --accent: #38BDF8;
-    --accent-wash: rgba(56, 189, 248, 0.16);
-    --line: rgba(255, 255, 255, 0.14);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.6);
+    --accent-wash: rgba(56, 189, 248, 0.14);
+    --line: rgba(255, 255, 255, 0.12);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
     
-    background: linear-gradient(-45deg, #050811, #0c1427, #071e29, #130f26, #091a24, #050811) !important;
-    background-size: 400% 400% !important;
-    animation: animatedDarkGradient 22s ease infinite !important;
-    color: #F8FAFC !important;
+    background: #0B132B !important;
+    color: #F1F5F9 !important;
     min-height: 100vh;
   }
 
@@ -1272,6 +1376,7 @@
     color: #94A3B8;
   }
 
+  body.dark-mode .system-status-badge,
   body.dark-mode .engine-badge,
   body.dark-mode .btn-settings,
   body.dark-mode .btn-theme,
@@ -1282,6 +1387,7 @@
     backdrop-filter: blur(12px);
     transition: all 0.2s ease;
   }
+  body.dark-mode .system-status-badge:hover,
   body.dark-mode .engine-badge:hover,
   body.dark-mode .btn-settings:hover,
   body.dark-mode .btn-theme:hover,
@@ -1291,37 +1397,70 @@
     background: rgba(16, 185, 129, 0.15) !important;
     box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
   }
-  body.dark-mode .readiness-badge {
-    background: rgba(245, 158, 11, 0.16) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-    color: #FBBF24 !important;
+  body.dark-mode .btn-delete-chat{
+    background:rgba(220,38,38,0.12) !important;
+    border:1px solid rgba(220,38,38,0.35) !important;
+    color:#f87171 !important;
   }
-  body.dark-mode .readiness-badge.ready {
-    background: rgba(16, 185, 129, 0.18) !important;
-    border-color: rgba(16, 185, 129, 0.4) !important;
-    color: #34D399 !important;
+  body.dark-mode .btn-delete-chat:hover{
+    background:#dc2626 !important;
+    color:#ffffff !important;
+    box-shadow:0 0 12px rgba(220,38,38,0.4);
   }
-  body.dark-mode .readiness-badge.ready .readiness-dot {
-    background: #10B981 !important;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.7) !important;
+  body.dark-mode .chat-thread-header{
+    background:rgba(30,41,59,0.7) !important;
+    border-color:rgba(255,255,255,0.12) !important;
   }
-
-  body.dark-mode .engine-badge.active-live {
+  body.dark-mode .thread-info{color:#cbd5e1 !important}
+  body.dark-mode .btn-thread-delete{
+    border-color:rgba(220,38,38,0.4) !important;
+    color:#f87171 !important;
+  }
+  body.dark-mode .btn-thread-delete:hover{
+    background:#dc2626 !important;
+    color:#ffffff !important;
+  }
+  body.dark-mode .btn-turn-action{
+    border-color:rgba(255,255,255,0.14);color:#94a3b8;
+  }
+  body.dark-mode .btn-turn-action:hover{
+    background:rgba(255,255,255,0.08);color:#f8fafc;
+  }
+  body.dark-mode .btn-turn-action.btn-turn-delete:hover{
+    background:rgba(220,38,38,0.2);color:#f87171;border-color:rgba(220,38,38,0.4);
+  }
+  body.dark-mode .btn-skip-typing{
+    background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3);color:#34d399;
+  }
+  body.dark-mode .btn-skip-typing:hover{
+    background:#10b981;color:#fff;
+  }
+  body.dark-mode .typing-cursor{background:#10b981}
+  body.dark-mode .toast-notification{background:#0f172a;border-left-color:#10b981;box-shadow:0 8px 24px rgba(0,0,0,0.6)}
+  body.dark-mode .system-status-badge.status-live {
     background: rgba(16, 185, 129, 0.18) !important;
     border-color: #10B981 !important;
     color: #34D399 !important;
   }
-  body.dark-mode .engine-badge.active-live .dot {
+  body.dark-mode .system-status-badge.status-live .status-dot {
     background: #10B981 !important;
     box-shadow: 0 0 8px rgba(16, 185, 129, 0.7) !important;
   }
-  body.dark-mode .engine-badge.active-local {
+  body.dark-mode .system-status-badge.status-local {
     background: rgba(251, 191, 36, 0.16) !important;
     border-color: #FBBF24 !important;
     color: #FBBF24 !important;
   }
-  body.dark-mode .engine-badge.active-local .dot {
+  body.dark-mode .system-status-badge.status-local .status-dot {
     background: #FBBF24 !important;
+  }
+  body.dark-mode .system-status-badge.status-init {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    color: #FBBF24 !important;
+  }
+  body.dark-mode .system-status-badge.status-init .status-dot {
+    background: #F59E0B !important;
   }
 
   body.dark-mode .lang {
@@ -1948,7 +2087,7 @@
   </div>
   <div class="gov-top-inner">
     <div class="gov-top-left">
-      <span class="gov-emblem-badge">🇮🇳 <span class="gov-text-hi">भारत सरकार</span></span>
+      <span class="gov-emblem-badge"><span class="gov-text-hi">भारत सरकार</span></span>
       <span class="gov-sep">|</span>
       <span class="gov-text-en">Government of India</span>
       <span class="gov-sep">·</span>
@@ -1971,23 +2110,25 @@
       <span id="kbcount">56 verified standards loaded</span>
     </div>
     <div class="nav-actions">
-      <div class="readiness-badge ready" id="readiness-badge" title="Checking AI & Neural Vision status...">
-        <span class="readiness-dot"></span>
-        <span id="readiness-text">🟢 All Systems Ready</span>
-      </div>
-      <button type="button" class="engine-badge active-live" id="engine-badge" title="AI Assistant Status">
-        <span class="dot"></span>
-        <span id="engine-text">AI Assistant (Live)</span>
+      <button type="button" class="system-status-badge status-live" id="system-status-badge" title="AI Assistant Online · 56 Standards Verified (Click to configure)">
+        <span class="status-dot"></span>
+        <span id="system-status-text">AI Assistant · Live</span>
       </button>
       <button type="button" class="btn-settings" id="btn-settings" title="Settings">
-        ⚙️ Settings
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Settings</span>
       </button>
-      <button type="button" class="btn-theme" id="btn-theme" title="Toggle Animated Dark Gradient Mode">
+      <button type="button" class="btn-theme" id="btn-theme" title="Toggle Dark Mode">
         <svg viewBox="0 0 24 24" class="theme-icon" width="15" height="15" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
         <span id="theme-btn-text">Dark Mode</span>
       </button>
       <button type="button" class="btn-new-chat" id="btn-new-chat" title="Start a fresh conversation thread">
-        ➕ New Chat
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span>New Chat</span>
+      </button>
+      <button type="button" class="btn-delete-chat" id="btn-delete-chat" title="Delete current conversation and clear history">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span>Delete Chat</span>
       </button>
       <div class="lang" role="group" aria-label="Language">
         <button id="btn-en" aria-pressed="true">English</button>
@@ -1999,7 +2140,9 @@
   <!-- Active Agent Persona Banner -->
   <div class="active-agent-banner" id="active-agent-banner">
     <div class="active-agent-info">
-      <div class="active-agent-icon" id="active-agent-icon">🏛️</div>
+      <div class="active-agent-icon" id="active-agent-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v2h18V5l-9-4zm-7 8v9h2V9H5zm5 0v9h2V9h-2zm5 0v9h2V9h-2zm5 0v9h2V9h-2zM2 20v2h20v-2H2z"/></svg>
+      </div>
       <div>
         <div class="active-agent-name-row">
           <b id="active-agent-name">National Bureau of Indian Standards Assistant</b>
@@ -2010,10 +2153,10 @@
     </div>
     <div class="active-agent-actions">
       <button type="button" class="btn-marketplace-jump" id="btn-browse-agents">
-        🏬 Explore Agents Marketplace
+        Explore Agents Directory
       </button>
       <button type="button" class="btn-reset-agent" id="btn-reset-agent" style="display:none;" title="Reset to general assistant">
-        ✕ Reset Persona
+        Reset Persona
       </button>
     </div>
   </div>
@@ -2049,7 +2192,8 @@
       <!-- Hidden file input -->
       <input type="file" id="file-input" accept="image/*" style="display:none">
       <button type="button" class="btn-upload" id="btn-upload" title="Upload an image of an item to identify BIS standards">
-        📷 <span>Upload Item</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        <span>Upload Item</span>
       </button>
 
       <button class="go" type="submit" id="go">
@@ -2067,7 +2211,7 @@
       <div class="marketplace-title-group">
         <div class="marketplace-pre">GPT-STORE ARCHITECTURE · VERIFIED TECHNICAL PERSONAS</div>
         <h2 class="marketplace-title">
-          <span>🏬 BIS Specialized Category Agents Marketplace</span>
+          <span>BIS Specialized Category Agents Directory</span>
           <span class="marketplace-count-badge" id="marketplace-count-badge">16 Verified Agents</span>
         </h2>
         <p class="marketplace-sub" id="marketplace-sub">
@@ -2083,7 +2227,7 @@
 
     <!-- Search filter input for agents -->
     <div class="marketplace-search-row">
-      <input type="text" id="agent-search-input" placeholder="🔍 Search agents by name, standard (e.g. IS 4151, IS 1417), or keyword (shoes, rebar, solar)...">
+      <input type="text" id="agent-search-input" placeholder="Search agents by name, standard (e.g. IS 4151, IS 1417), or keyword...">
     </div>
 
     <!-- Agent Cards Grid -->
@@ -2221,24 +2365,60 @@ function getSavedModel(){
   return localStorage.getItem("bis_groq_model") || "openai/gpt-oss-120b";
 }
 
-function updateEngineBadge(){
-  const badge = $("engine-badge");
-  const text = $("engine-text");
+let isSystemReady = true;
+let isVisionReady = false;
+let systemStatusState = "live";
+
+function updateSystemStatus(overrideState, customText, customTooltip){
+  const badge = $("system-status-badge") || $("engine-badge");
+  const text = $("system-status-text") || $("engine-text");
+  if (!badge || !text) return;
+
   const mode = getSavedMode();
   const hasKey = Boolean(getSavedApiKey() || serverConfig.server_has_key);
 
-  badge.className = "engine-badge";
+  badge.className = "system-status-badge";
+
+  if (overrideState === "init"){
+    systemStatusState = "init";
+    badge.classList.add("status-init");
+    text.textContent = customText || (lang === "hi" ? "सिस्टम कनेक्ट हो रहा है..." : "Connecting Services...");
+    badge.title = customTooltip || "Initializing BIS services and AI reasoning engine...";
+    return;
+  }
+
+  if (overrideState === "error"){
+    systemStatusState = "error";
+    badge.classList.add("status-error");
+    text.textContent = customText || (lang === "hi" ? "लोकल रिकॉर्ड्स (ऑफलाइन)" : "Local Records · Offline");
+    badge.title = customTooltip || "AI service unreachable. Operating on 56 verified Indian standards database.";
+    return;
+  }
 
   if (mode === "dataset"){
-    badge.classList.add("active-local");
-    text.textContent = "Verified Records";
+    systemStatusState = "local";
+    badge.classList.add("status-local");
+    text.textContent = lang === "hi" ? "सत्यापित रिकॉर्ड्स · लोकल" : "Verified Records · Local";
+    badge.title = "Local mode active: Grounded strictly on 56 verified Indian Standards. Click to open Settings.";
   } else if (hasKey){
-    badge.classList.add("active-live");
-    text.textContent = "AI Assistant (Live)";
+    systemStatusState = "live";
+    badge.classList.add("status-live");
+    text.textContent = lang === "hi" ? "एआई सहायक · लाइव" : "AI Assistant · Live";
+    const visionNote = isVisionReady ? " + Vision Engine Active" : "";
+    badge.title = `BIS Sahayak Online: Groq RAG Engine Active (${serverConfig.model || "gpt-oss-120b"}${visionNote}) • 56 Standards Verified. Click to configure.`;
   } else {
-    badge.classList.add("active-local");
-    text.textContent = "Local Records";
+    systemStatusState = "local";
+    badge.classList.add("status-local");
+    text.textContent = lang === "hi" ? "लोकल रिकॉर्ड्स · RAG" : "Local Records · RAG";
+    badge.title = "Local grounded search active. Add Groq API Key in Settings for live cloud reasoning.";
   }
+
+  if (customText) text.textContent = customText;
+  if (customTooltip) badge.title = customTooltip;
+}
+
+function updateEngineBadge(){
+  updateSystemStatus();
 }
 
 function updateThemeButtonText(){
@@ -2290,6 +2470,7 @@ function applyLang(){
   $("btn-hi").setAttribute("aria-pressed", lang === "hi");
   document.documentElement.lang = lang;
   updateThemeButtonText();
+  updateSystemStatus();
   renderChips();
 
   if (currentSelectedAgent){
@@ -2457,8 +2638,8 @@ function renderBisCard(card){
   const stdBadgeText = card.is_number || (isHi ? "भारतीय मानक" : "Indian Standard");
   const stdStatusText = card.status || (isHi ? "आधिकारिक भारतीय मानक" : "Official Standard");
   const defTitle = isHi ? "मानक परिभाषा एवं कार्यक्षेत्र" : "Standard Definition & Scope";
-  const givenTitle = isHi ? "✅ किन उत्पादों / उपयोगों के लिए दिया जाता है" : "✅ For Which Things It Is Given To";
-  const notGivenTitle = isHi ? "❌ क्या शामिल नहीं है / अपवाद" : "❌ Not Covered / Exceptions";
+  const givenTitle = isHi ? "किन उत्पादों / उपयोगों के लिए दिया जाता है" : "Covered Products / Scope";
+  const notGivenTitle = isHi ? "क्या शामिल नहीं है / अपवाद" : "Not Covered / Exclusions";
 
   let html = `<div class="${cardClass}">`;
   html += `<div class="bis-card-top">`;
@@ -2515,8 +2696,8 @@ function renderBisCard(card){
   if (card.doc_url || card.source_url){
     const docUrl = card.doc_url || card.source_url;
     const portalUrl = card.portal_url || "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails";
-    const readDocLabel = isHi ? "📄 आधिकारिक मानक दस्तावेज़ पढ़ें (PDF / ई-रीडर)" : "📄 Read Official Standard Document (PDF / Reader)";
-    const bisPortalLabel = isHi ? "🏛️ बीआईएस मानक पोर्टल खोजें" : "🏛️ Search on BIS Official Portal";
+    const readDocLabel = isHi ? "आधिकारिक मानक दस्तावेज़ पढ़ें (PDF / ई-रीडर)" : "Read Official Standard Document (PDF / Reader)";
+    const bisPortalLabel = isHi ? "बीआईएस मानक पोर्टल खोजें" : "Search on BIS Official Portal";
 
     html += `<div class="bis-card-actions">`;
     html += `  <a href="${docUrl}" target="_blank" rel="noopener" class="bis-btn-action bis-btn-doc" title="View official government standard document on Public Safety Standards archive">`;
@@ -2589,7 +2770,7 @@ function loadChatSessionFromStorage(){
     notice.className = "chat-cache-notice";
     notice.id = "chat-cache-notice";
     notice.innerHTML = `
-      <span>💾 Previous consultation restored from local cached memory (${session.turns.length} messages)</span>
+      <span>Previous consultation restored from local cached memory (${session.turns.length} messages)</span>
       <button type="button" onclick="$('btn-new-chat').click()">Clear History</button>
     `;
     thread.appendChild(notice);
@@ -2601,6 +2782,7 @@ function loadChatSessionFromStorage(){
       // 1. Render User Turn
       const userTurn = document.createElement("div");
       userTurn.className = "chat-turn-user";
+      userTurn.id = `user-turn-${tid}`;
       let userHtml = `
         <div class="user-avatar" title="You">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
@@ -2610,11 +2792,16 @@ function loadChatSessionFromStorage(){
       if (turn.imageInfo){
         userHtml += `
           <div class="user-bubble-thumb">
-            <span><b>📷 ${escapeHtml(turn.imageInfo.identified_item || turn.imageInfo.name || "Attached Item")}</b></span>
+            <span><b>Attached Item: ${escapeHtml(turn.imageInfo.identified_item || turn.imageInfo.name || "Product")}</b></span>
           </div>
         `;
       }
-      userHtml += `<div class="user-query-text">${escapeHtml(turn.userQuery || "")}</div></div>`;
+      userHtml += `
+        <div class="user-query-row">
+          <div class="user-query-text">${escapeHtml(turn.userQuery || "")}</div>
+          <button type="button" class="btn-bubble-delete" onclick="deleteTurn(${tid})" title="Delete message"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+        </div>
+      </div>`;
       userTurn.innerHTML = userHtml;
       thread.appendChild(userTurn);
 
@@ -2632,7 +2819,7 @@ function loadChatSessionFromStorage(){
           ${avatarIcon}
         </div>
         <div class="assistant-content" id="turn-content-${tid}">
-          ${renderTurn(turn.data, turn.ms || 150, tid)}
+          ${renderTurn(turn.data, turn.ms || 150, tid, false)}
         </div>
       `;
       thread.appendChild(assistantTurn);
@@ -2641,6 +2828,7 @@ function loadChatSessionFromStorage(){
     if (session.turns.length > 0){
       $("chips-label").style.display = "none";
       $("chips").style.display = "none";
+      updateChatThreadHeader();
     }
 
     setTimeout(() => {
@@ -2741,7 +2929,7 @@ function renderAgentsGrid(){
       const name = (lang === "hi" && agent.name_hi) ? agent.name_hi : agent.name;
       const desc = (lang === "hi" && agent.description_hi) ? agent.description_hi : agent.description;
       const consultBtnText = isSelected
-        ? (lang === "hi" ? "✓ सक्रिय विशेषज्ञ" : "✓ Active Persona")
+        ? (lang === "hi" ? "सक्रिय विशेषज्ञ" : "Active Persona")
         : (lang === "hi" ? "सलाह लें &rarr;" : "Consult Agent &rarr;");
 
       let stdChipsHtml = agent.standards.slice(0, 3).map(s => `<span class="agent-std-tag">${s}</span>`).join("");
@@ -2824,7 +3012,7 @@ function selectAgent(agentId, promptQuestion = false){
 
 function resetAgent(){
   currentSelectedAgent = null;
-  $("active-agent-icon").textContent = "🏛️";
+  $("active-agent-icon").innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v2h18V5l-9-4zm-7 8v9h2V9H5zm5 0v9h2V9h-2zm5 0v9h2V9h-2zm5 0v9h2V9h-2zM2 20v2h20v-2H2z"/></svg>';
   $("active-agent-name").textContent = (lang === "hi" ? "राष्ट्रीय बीआईएस मानक सहायक" : "National Bureau of Indian Standards Assistant");
   $("active-agent-tag").textContent = (lang === "hi" ? "व्यापक दायरा" : "Comprehensive Scope");
   $("active-agent-desc").textContent = (lang === "hi"
@@ -2867,9 +3055,9 @@ window.askFollowUp = function(text){
 
 function renderFollowUpChips(suggestions, turnId){
   if (!suggestions || !suggestions.length) return "";
-  const title = (lang === "hi" ? "✨ सुझाए गए अनुवर्ती प्रश्न (Follow-up Queries):" : "✨ Suggested Follow-up Inquiries:");
+  const title = (lang === "hi" ? "सुझाए गए अनुवर्ती प्रश्न (Follow-up Queries):" : "Suggested Follow-up Queries:");
   let html = `<div class="follow-up-section">`;
-  html += `<div class="follow-up-title"><span class="follow-up-sparkle">✨</span> <span>${title}</span></div>`;
+  html += `<div class="follow-up-title"><span>${title}</span></div>`;
   html += `<div class="follow-up-chips">`;
   suggestions.forEach(s => {
     html += `<button type="button" class="follow-up-chip" onclick="askFollowUp('${escapeForAttr(s)}')">`;
@@ -3002,7 +3190,7 @@ function renderInspectionLoader(turnId = 0){
   `;
 }
 
-function renderTurn(data, ms, turnId){
+function renderTurn(data, ms, turnId, enableTyping = false){
   const c = COPY[lang];
   let modeLabel = c.local;
   let pillClass = "pill";
@@ -3043,6 +3231,10 @@ function renderTurn(data, ms, turnId){
   if (data.citations){
     html += '<span>' + (data.citations.length) + ' ' + c.sources.toLowerCase() + '</span>';
   }
+  html += '<div class="meta-right-actions">';
+  html += `<button type="button" class="btn-turn-action" onclick="copyTurnAnswer(${turnId})" title="Copy answer to clipboard"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> <span>Copy</span></button>`;
+  html += `<button type="button" class="btn-turn-action btn-turn-delete" onclick="deleteTurn(${turnId})" title="Delete this consultation turn"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg> <span>Delete</span></button>`;
+  html += '</div>';
   html += '</div>';
 
   // 5 Indian Regional Languages Toolbar for this turn
@@ -3078,17 +3270,23 @@ function renderTurn(data, ms, turnId){
     html += '</div>';
   }
 
-  // Standard card container
+  // Standard card container (Analyzed: rendered only when standard_card is provided)
   html += `<div id="turn-${turnId}-card">`;
   if (data.standard_card){
     html += renderBisCard(data.standard_card);
   }
   html += '</div>';
 
-  // Answer body container
-  html += `<div id="turn-${turnId}-body" class="answer-content">` + parseMarkdown(data.answer) + '</div>';
+  // Answer body container with typing stream support
+  if (enableTyping) {
+    html += `<div id="turn-${turnId}-body" class="answer-content typing-active" onclick="skipTyping(${turnId})" title="Click to display complete response immediately"></div>`;
+    html += `<div id="turn-${turnId}-typing-ctrl" class="typing-ctrl"><button type="button" class="btn-skip-typing" onclick="skipTyping(${turnId})">Skip typing</button></div>`;
+  } else {
+    html += `<div id="turn-${turnId}-body" class="answer-content">` + parseMarkdown(data.answer) + '</div>';
+  }
 
   // Sources slips
+  html += `<div id="turn-${turnId}-sources" style="${enableTyping ? 'display:none;' : ''}">`;
   if (data.citations && data.citations.length){
     html += '<div class="sources"><h2>' + c.sources + '</h2>';
     data.citations.forEach(s => {
@@ -3096,7 +3294,7 @@ function renderTurn(data, ms, turnId){
       const cls = isDyn ? "slip dynamic" : (s.verified ? "slip" : "slip unverified");
       const isStd = s.label && s.label.toUpperCase().startsWith("IS ");
       const badgeText = isStd
-        ? '<span class="slip-doc-pill">📄 ' + (lang === "hi" ? "आधिकारिक दस्तावेज़" : "Official Document (PDF)") + '</span>'
+        ? '<span class="slip-doc-pill">' + (lang === "hi" ? "आधिकारिक दस्तावेज़" : "Official Document (PDF)") + '</span>'
         : (isDyn ? '<span>' + (lang === "hi" ? "मानक संदर्भ" : "Portal Reference") + '</span>' : '');
       const docActionHint = isStd
         ? '<span class="slip-action-tip">' + (lang === "hi" ? "दस्तावेज़ ई-रीडर एवं PDF खोलें &rarr;" : "Open Official Document Reader & PDF &rarr;") + '</span>'
@@ -3108,14 +3306,238 @@ function renderTurn(data, ms, turnId){
     });
     html += '</div>';
   }
+  html += '</div>';
 
   // Dynamic Follow-up Suggestions Chips
+  html += `<div id="turn-${turnId}-followups" style="${enableTyping ? 'display:none;' : ''}">`;
   if (data.follow_up_suggestions && data.follow_up_suggestions.length){
     html += renderFollowUpChips(data.follow_up_suggestions, turnId);
   }
+  html += '</div>';
 
   html += '</div>';
   return html;
+}
+
+// ==========================================
+// Typing Effect Engine for Smooth Response Stream
+// ==========================================
+let activeTypingSessions = {};
+
+function startTypingEffect(turnId, fullMarkdown){
+  if (!fullMarkdown) {
+    finalizeTyping(turnId, "");
+    return;
+  }
+  const bodyEl = document.getElementById(`turn-${turnId}-body`);
+  if (!bodyEl) return;
+
+  const tokens = fullMarkdown.match(/(\r\n|\n|[^\s\r\n]+|\s+)/g) || [fullMarkdown];
+  let tokenIdx = 0;
+  let accumulated = "";
+
+  const session = {
+    cancelled: false,
+    timer: null,
+    finish: function(){
+      if (session.timer) clearTimeout(session.timer);
+      session.cancelled = true;
+      delete activeTypingSessions[turnId];
+      finalizeTyping(turnId, fullMarkdown);
+    }
+  };
+
+  activeTypingSessions[turnId] = session;
+
+  function step(){
+    if (session.cancelled) return;
+    const stepCount = Math.min(tokens.length - tokenIdx, 2);
+    for (let i = 0; i < stepCount; i++){
+      accumulated += tokens[tokenIdx++];
+    }
+
+    if (bodyEl){
+      bodyEl.innerHTML = parseMarkdown(accumulated) + '<span class="typing-cursor">▌</span>';
+    }
+
+    if (tokenIdx < tokens.length){
+      session.timer = setTimeout(step, 14);
+    } else {
+      session.finish();
+    }
+  }
+
+  step();
+}
+
+function finalizeTyping(turnId, fullMarkdown){
+  const bodyEl = document.getElementById(`turn-${turnId}-body`);
+  const ctrlEl = document.getElementById(`turn-${turnId}-typing-ctrl`);
+  const sourcesEl = document.getElementById(`turn-${turnId}-sources`);
+  const followupsEl = document.getElementById(`turn-${turnId}-followups`);
+
+  if (bodyEl){
+    bodyEl.classList.remove("typing-active");
+    bodyEl.innerHTML = parseMarkdown(fullMarkdown);
+  }
+  if (ctrlEl) ctrlEl.style.display = "none";
+  if (sourcesEl){
+    sourcesEl.style.display = "block";
+    sourcesEl.style.animation = "fadeInUp 0.3s ease";
+  }
+  if (followupsEl){
+    followupsEl.style.display = "block";
+    followupsEl.style.animation = "fadeInUp 0.3s ease";
+  }
+}
+
+function skipTyping(turnId){
+  if (activeTypingSessions[turnId]){
+    activeTypingSessions[turnId].finish();
+  }
+}
+
+// ==========================================
+// Chat Deletion & Management Features
+// ==========================================
+function confirmDeleteChat(){
+  if (!cachedTurns.length && !chatHistory.length){
+    showToast("No active conversation to delete.");
+    return;
+  }
+  if (confirm("Are you sure you want to delete this conversation and clear all history?")){
+    deleteEntireChat();
+  }
+}
+
+function deleteEntireChat(){
+  for (const tid in activeTypingSessions){
+    if (activeTypingSessions[tid] && activeTypingSessions[tid].timer){
+      clearTimeout(activeTypingSessions[tid].timer);
+    }
+  }
+  activeTypingSessions = {};
+
+  chatHistory = [];
+  cachedTurns = [];
+  turnsDataStore = {};
+  turnCount = 0;
+  clearChatSessionStorage();
+
+  const thread = $("chat-thread");
+  if (thread) thread.innerHTML = "";
+
+  $("q").value = "";
+  const chatInp = $("chat-input");
+  if (chatInp) chatInp.value = "";
+  if (attachedImage.data) $("btn-cancel-img").click();
+
+  $("chips-label").style.display = "block";
+  $("chips").style.display = "flex";
+
+  updateChatThreadHeader();
+  showToast("Consultation deleted and history cleared.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function deleteTurn(turnId){
+  if (activeTypingSessions[turnId]){
+    clearTimeout(activeTypingSessions[turnId].timer);
+    delete activeTypingSessions[turnId];
+  }
+
+  const assistantEl = document.getElementById(`turn-${turnId}`);
+  const userEl = document.getElementById(`user-turn-${turnId}`);
+
+  if (assistantEl) assistantEl.classList.add("fade-out-shrink");
+  if (userEl) userEl.classList.add("fade-out-shrink");
+
+  setTimeout(() => {
+    if (assistantEl && assistantEl.parentNode) assistantEl.parentNode.removeChild(assistantEl);
+    if (userEl && userEl.parentNode) userEl.parentNode.removeChild(userEl);
+
+    cachedTurns = cachedTurns.filter(t => t.turnId !== turnId);
+    delete turnsDataStore[turnId];
+
+    chatHistory = [];
+    cachedTurns.forEach(t => {
+      chatHistory.push({ role: "user", content: t.userQuery });
+      if (t.data && t.data.answer){
+        chatHistory.push({ role: "assistant", content: t.data.answer });
+      }
+    });
+
+    saveChatSessionToStorage();
+    updateChatThreadHeader();
+
+    if (cachedTurns.length === 0){
+      const notice = document.getElementById("chat-cache-notice");
+      if (notice && notice.parentNode) notice.parentNode.removeChild(notice);
+      $("chips-label").style.display = "block";
+      $("chips").style.display = "flex";
+    }
+
+    showToast("Message removed from consultation.");
+  }, 220);
+}
+
+function copyTurnAnswer(turnId){
+  const turn = turnsDataStore[turnId];
+  const text = (turn && turn.data && turn.data.answer) || "";
+  if (text && navigator.clipboard){
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Response copied to clipboard.");
+    }).catch(() => {
+      showToast("Could not copy to clipboard.");
+    });
+  }
+}
+
+function showToast(msg){
+  let toast = document.getElementById("bis-toast");
+  if (!toast){
+    toast = document.createElement("div");
+    toast.id = "bis-toast";
+    toast.className = "toast-notification";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add("show");
+  if (window._toastTimer) clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2800);
+}
+
+function updateChatThreadHeader(){
+  const thread = $("chat-thread");
+  if (!thread) return;
+  let header = document.getElementById("chat-thread-header");
+
+  if (cachedTurns.length === 0){
+    if (header && header.parentNode) header.parentNode.removeChild(header);
+    return;
+  }
+
+  if (!header){
+    header = document.createElement("div");
+    header.id = "chat-thread-header";
+    header.className = "chat-thread-header";
+    thread.insertBefore(header, thread.firstChild);
+  }
+
+  header.innerHTML = `
+    <div class="thread-info">
+      <span class="thread-pulse-dot"></span>
+      <span class="thread-title">Active BIS Consultation (${cachedTurns.length} message turn${cachedTurns.length > 1 ? 's' : ''})</span>
+    </div>
+    <div class="thread-actions">
+      <button type="button" class="btn-thread-delete" onclick="confirmDeleteChat()" title="Delete entire conversation">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        <span>Delete Chat</span>
+      </button>
+    </div>
+  `;
 }
 
 async function ask(question){
@@ -3146,9 +3568,10 @@ async function ask(question){
   turnCount++;
   const thisTurnId = turnCount;
 
-  // 1. Create and append User message turn
+  // 1. Create and append User message turn with dedicated delete action
   const userTurn = document.createElement("div");
   userTurn.className = "chat-turn-user";
+  userTurn.id = `user-turn-${thisTurnId}`;
   let userHtml = `
     <div class="user-avatar" title="You">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
@@ -3159,11 +3582,16 @@ async function ask(question){
     userHtml += `
       <div class="user-bubble-thumb">
         <img src="${currentImg.data}" alt="Product Image">
-        <span><b>${escapeHtml(currentImg.identified_item || currentImg.name || "Attached Item")}</b></span>
+        <span><b>Attached Item: ${escapeHtml(currentImg.identified_item || currentImg.name || "Product")}</b></span>
       </div>
     `;
   }
-  userHtml += `<div class="user-query-text">${escapeHtml(question || "Identify item standards")}</div></div>`;
+  userHtml += `
+    <div class="user-query-row">
+      <div class="user-query-text">${escapeHtml(question || "Identify item standards")}</div>
+      <button type="button" class="btn-bubble-delete" onclick="deleteTurn(${thisTurnId})" title="Delete message"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+    </div>
+  </div>`;
   userTurn.innerHTML = userHtml;
   $("chat-thread").appendChild(userTurn);
 
@@ -3239,7 +3667,8 @@ async function ask(question){
 
     const container = $(`turn-content-${thisTurnId}`);
     if (container){
-      container.innerHTML = renderTurn(data, Math.round(performance.now() - t0), thisTurnId);
+      container.innerHTML = renderTurn(data, Math.round(performance.now() - t0), thisTurnId, true);
+      startTypingEffect(thisTurnId, data.answer);
     }
 
     // Append to multi-turn conversational history
@@ -3266,6 +3695,7 @@ async function ask(question){
     });
     if (cachedTurns.length > 20) cachedTurns = cachedTurns.slice(-20);
     saveChatSessionToStorage();
+    updateChatThreadHeader();
 
     setTimeout(() => {
       assistantTurn.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -3287,21 +3717,15 @@ async function ask(question){
 // ==========================================
 // System Readiness Indicator & State Tracking
 // ==========================================
-let isSystemReady = false;
-
 function updateReadiness(ready, text, tooltip){
-  const b = $("readiness-badge");
-  const t = $("readiness-text");
-  if (!b || !t) return;
   if (ready) {
-    b.classList.add("ready");
-    t.textContent = text || "🟢 System Ready";
-    b.title = tooltip || "All systems online: BIS Knowledge Base verified, AI reasoning active, Neural Vision loaded";
     isSystemReady = true;
+    if (text && (text.toLowerCase().includes("vision") || text.toLowerCase().includes("all systems"))) {
+      isVisionReady = true;
+    }
+    updateSystemStatus();
   } else {
-    b.classList.remove("ready");
-    t.textContent = text || "Initializing AI & Vision...";
-    b.title = tooltip || "Warming up components...";
+    updateSystemStatus("init", text, tooltip);
   }
 }
 
@@ -3323,7 +3747,8 @@ async function getVisionModel(timeoutMs = 6000){
     }
     if (!window.mobilenet) {
       console.warn("Client MobileNet script not loaded, will use server-side CV.");
-      updateReadiness(true, "🟢 System Ready (Hybrid CV)");
+      isVisionReady = false;
+      updateSystemStatus();
       return null;
     }
 
@@ -3331,11 +3756,13 @@ async function getVisionModel(timeoutMs = 6000){
       // Load optimized, lightweight MobileNetV2 (~3.2MB for 3x faster startup)
       visionNet = await mobilenet.load({ version: 2, alpha: 0.50 });
       console.log("MobileNet Computer Vision engine loaded successfully.");
-      updateReadiness(true, "🟢 All Systems Ready", "Knowledge Base, AI Reasoning, and Neural Vision Active");
+      isVisionReady = true;
+      updateSystemStatus();
       return visionNet;
     } catch(err){
       console.warn("MobileNet load error, switching to server CV:", err);
-      updateReadiness(true, "🟢 System Ready (Server CV)");
+      isVisionReady = false;
+      updateSystemStatus();
       return null;
     }
   })();
@@ -3642,14 +4069,14 @@ $("file-input").onchange = (e) => {
               const silverBtn = document.createElement("button");
               silverBtn.type = "button";
               silverBtn.className = "preview-tag";
-              silverBtn.textContent = "🥈 Silver Jewellery (IS 2112)";
+              silverBtn.textContent = "Silver Jewellery (IS 2112)";
               silverBtn.onclick = () => selectDetectedItem("Silver Jewellery & Artefacts (IS 2112 & Silver Hallmarking)");
               tagsBox.appendChild(silverBtn);
 
               const goldBtn = document.createElement("button");
               goldBtn.type = "button";
               goldBtn.className = "preview-tag";
-              goldBtn.textContent = "🥇 Gold Jewellery (IS 1417)";
+              goldBtn.textContent = "Gold Jewellery (IS 1417)";
               goldBtn.onclick = () => selectDetectedItem("Gold Jewellery & Artefacts (IS 1417 & 6-digit HUID)");
               tagsBox.appendChild(goldBtn);
             }
@@ -3771,8 +4198,8 @@ $("file-input").onchange = (e) => {
         const tagsBox = $("visual-tags");
         tagsBox.innerHTML = "";
         [
-          "🥈 Silver Jewellery (IS 2112)",
-          "🥇 Gold Jewellery (IS 1417)",
+          "Silver Jewellery (IS 2112)",
+          "Gold Jewellery (IS 1417)",
           "Eye-Protectors / Sunglasses",
           "Motorcycle Helmet",
           "Portable Fire Extinguisher",
@@ -3784,7 +4211,7 @@ $("file-input").onchange = (e) => {
           btn.type = "button";
           btn.className = "preview-tag";
           btn.textContent = cat;
-          btn.onclick = () => selectDetectedItem(cat.replace(/^[🥈🥇]\s*/, ""));
+          btn.onclick = () => selectDetectedItem(cat);
           tagsBox.appendChild(btn);
         });
       }
@@ -3820,9 +4247,12 @@ $("btn-settings").onclick = () => {
   $("modal").classList.add("open");
 };
 
-$("engine-badge").onclick = () => {
-  $("btn-settings").click();
-};
+const statusBtn = $("system-status-badge") || $("engine-badge");
+if (statusBtn){
+  statusBtn.onclick = () => {
+    $("btn-settings").click();
+  };
+}
 
 $("btn-modal-cancel").onclick = () => {
   $("modal").classList.remove("open");
@@ -3902,32 +4332,24 @@ $("btn-theme").onclick = () => {
 };
 
 $("btn-new-chat").onclick = () => {
-  chatHistory = [];
-  turnCount = 0;
-  turnsDataStore = {};
-  cachedTurns = [];
-  clearChatSessionStorage();
-  $("chat-thread").innerHTML = "";
-  $("q").value = "";
-  const chatInp = $("chat-input");
-  if (chatInp) chatInp.value = "";
-  if (attachedImage.data) $("btn-cancel-img").click();
-  $("chips-label").style.display = "block";
-  $("chips").style.display = "flex";
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  deleteEntireChat();
 };
+
+const btnDelChat = $("btn-delete-chat");
+if (btnDelChat){
+  btnDelChat.onclick = () => {
+    confirmDeleteChat();
+  };
+}
 
 fetch(API + "/api/config")
   .then(r => r.json())
   .then(d => {
     serverConfig = d;
-    updateEngineBadge();
-    if (!isSystemReady) {
-      updateReadiness(true, "🟢 System Ready", (d.model || "AI") + " • " + d.entries + " standards verified");
-    }
+    updateSystemStatus();
   })
   .catch(() => {
-    updateReadiness(true, "🟢 Database Ready", "Offline verified database active");
+    updateSystemStatus("error", (lang === "hi" ? "लोकल रिकॉर्ड्स (ऑफलाइन)" : "Local Records · Offline"), "Offline verified database active");
   });
 
 fetch(API + "/api/topics")

@@ -675,6 +675,90 @@ def extract_standard_card(text, hits=None, question="", lang="en"):
     return None
 
 
+IS_PATTERN = re.compile(r"\bIS\s*\d+(?:\s*\([^\)]+\))?", re.IGNORECASE)
+PRODUCT_KEYWORDS = [
+    "helmet", "footwear", "shoe", "shoes", "cement", "sariya", "tmt", "steel",
+    "water", "gold", "silver", "hallmark", "cable", "wire", "cylinder", "lpg",
+    "toy", "toys", "extinguisher", "fire", "iron", "cooker", "stove", "fan",
+    "geyser", "battery", "solar", "mask", "thermometer", "tyre", "plywood",
+    "chappal", "slipper", "sandal", "rebar", "concrete", "pipe"
+]
+
+PROCEDURAL_FOLLOW_UP_KEYWORDS = (
+    "fee", "fees", "cost", "costs", "price", "rate", "concession", "discount", "msme",
+    "apply", "application", "document", "documents", "process", "step", "steps",
+    "portal", "manakonline", "sit", "audit", "inspection", "factory inspection",
+    "lab", "test", "tests", "testing", "parameter", "parameters", "sample",
+    "renewal", "renew", "validity", "expiry", "grace period",
+    "penalty", "penalties", "punish", "punishment", "fine", "section 29", "offence", "jail",
+    "fake", "duplicate", "verify", "verification", "huid", "care app", "complaint", "grievance",
+    "difference", "differ", "compare", "comparison", "vs", "versus",
+    "शुल्क", "फीस", "लाइसेंस", "नवीनीकरण", "दस्तावेज", "ऑडिट", "जुर्माना", "सजा", "धारा 29",
+    "शिकायत", "सत्यापित", "अंतर", "तुलना", "आवेदन"
+)
+
+EXPLICIT_STANDARD_KEYWORDS = (
+    "which standard", "what standard", "is number", "standard for", "standard of",
+    "specification", "standard code", "give standard", "provide standard", "standard card",
+    "standards apply", "standard applies", "conforming standard",
+    "कौन सा मानक", "कौन सी मानक", "मानक क्या", "मानक संख्या", "मानक विनिर्देश"
+)
+
+
+def should_include_standard_card(question, chat_history=None, hits=None, raw_ai_has_card=False):
+    """
+    Intelligently analyzes whether to output the formal BIS Standard Card.
+    Criteria:
+      - Given mostly for first-time product/standard search, explicit standard inquiry,
+        or when a brand-new product/standard is introduced into an existing conversation.
+      - Suppressed for follow-up questions regarding fees, steps, documents, factory audits,
+        lab tests, renewals, penalties, complaints, or comparison between schemes.
+    """
+    q_lower = (question or "").lower()
+
+    # 1. Explicit request for Indian Standard specification or code
+    if any(k in q_lower for k in EXPLICIT_STANDARD_KEYWORDS):
+        return True
+
+    # 2. First turn in consultation
+    if not chat_history or len(chat_history) == 0:
+        # If user starts with a pure comparison inquiry (e.g. ISI vs CRS), prefer conversational comparison
+        if any(w in q_lower for w in ["difference", "compare", "vs", "versus", "अंतर", "तुलना"]):
+            return False
+        return True
+
+    # 3. Follow-up turn in an active conversation:
+    # Check if this query introduces a NEW product that wasn't in recent conversation history
+    prev_text = " ".join((t.get("content") or "").lower() for t in chat_history[-4:])
+    new_product_found = False
+    for p in PRODUCT_KEYWORDS:
+        if p in q_lower and p not in prev_text:
+            new_product_found = True
+            break
+
+    if new_product_found:
+        return True
+
+    # Check if query contains an explicit new IS number not mentioned previously
+    found_is = IS_PATTERN.findall(question)
+    if found_is:
+        if not any(is_num.lower() in prev_text for is_num in found_is):
+            return True
+
+    # 4. If query asks about fees, steps, audit, testing, renewal, penalty, or complaints -> Suppress standard card
+    if any(w in q_lower for w in PROCEDURAL_FOLLOW_UP_KEYWORDS):
+        return False
+
+    # 5. Short follow-up / relative questions -> Suppress standard card
+    if any(w in q_lower for w in [
+        "this", "it", "that", "these", "those", "the standard", "the product",
+        "इसका", "इसके", "इसकी", "और बताएं", "विस्तार से"
+    ]) or len(question.split()) <= 4:
+        return False
+
+    return raw_ai_has_card
+
+
 def clean_card_tags(text):
     return re.sub(r"\[STANDARD_CARD\].*?\[END_STANDARD_CARD\]\s*", "", text, flags=re.DOTALL).strip()
 
@@ -688,9 +772,18 @@ def grounded_answer(hits, lang="en"):
 
     parts = [body]
 
+    # Complete RAG: Multi-document synthesis across complementary knowledge entries
+    for h in hits[1:3]:
+        r = h["entry"]
+        if r.get("id") != top.get("id"):
+            r_title = r.get("title_hi" if lang == "hi" else "title", r.get("title", ""))
+            r_sum = r.get("summary_hi" if lang == "hi" else "summary", r.get("summary", ""))
+            if r_sum and len(r_sum) > 30:
+                parts.append(f"\n### {r_title}\n{r_sum}")
+
     labels = {
-        "en": ("\nWhat to do next:", "\nAlso relevant: "),
-        "hi": ("\nआगे क्या करें:", "\nये भी देखें: "),
+        "en": ("\n### Actionable Steps & Directives:", "\n**Also Relevant Standards & Schemes:** "),
+        "hi": ("\n### मुख्य प्रक्रियात्मक कदम एवं दिशा-निर्देश:", "\n**संबंधित मानक एवं योजनाएं:** "),
     }
     steps_label, related_label = labels.get(lang, labels["en"])
 
@@ -723,60 +816,60 @@ def generate_follow_up_suggestions(card, question, lang="en"):
     if lang == "hi":
         if "1417" in std or "2112" in std or "हॉलमार्क" in q_lower or "hallmark" in q_lower:
             return [
-                "🔍 बीआईएस केयर ऐप पर HUID कोड कैसे चेक करें?",
-                "🏪 ज्वैलर मानकॉन्लाइन (Manakonline) पर पंजीकरण कैसे करें?",
-                "⚖️ 2 ग्राम से कम वजन के आभूषणों पर क्या छूट है?",
-                "📋 हॉलमार्किंग के लिए एएचसी (AHC) केंद्र में कौन से परीक्षण होते हैं?",
+                "बीआईएस केयर ऐप पर HUID कोड कैसे चेक करें?",
+                "ज्वैलर मानकॉन्लाइन (Manakonline) पर पंजीकरण कैसे करें?",
+                "2 ग्राम से कम वजन के आभूषणों पर क्या छूट है?",
+                "हॉलमार्किंग के लिए एएचसी (AHC) केंद्र में कौन से परीक्षण होते हैं?",
             ]
         elif std and std != "Non-Mandatory / Voluntary":
             return [
-                f"💰 {std} के लिए आवेदन, परीक्षण और मार्किंग शुल्क कितना है?",
-                f"📋 {std} के लिए फैक्ट्री ऑडिट और आवश्यक दस्तावेजों की सूची क्या है?",
-                f"⚖️ क्या {std} के तहत गुणवत्ता नियंत्रण आदेश (QCO) अनिवार्य है?",
-                f"🔄 {std} लाइसेंस की वैधता और नवीनीकरण प्रक्रिया क्या है?",
+                f"{std} के लिए आवेदन, परीक्षण और मार्किंग शुल्क कितना है?",
+                f"{std} के लिए फैक्ट्री ऑडिट और आवश्यक दस्तावेजों की सूची क्या है?",
+                f"क्या {std} के तहत गुणवत्ता नियंत्रण आदेश (QCO) अनिवार्य है?",
+                f"{std} लाइसेंस की वैधता और नवीनीकरण प्रक्रिया क्या है?",
             ]
         elif "isi" in q_lower or "crs" in q_lower or "योजना" in q_lower or "scheme" in q_lower:
             return [
-                "🏢 छोटे व्यवसाय (MSME) बीआईएस प्रमाणन प्रक्रिया कैसे शुरू करें?",
-                "🔄 लाइसेंस समाप्त होने से पहले नवीनीकरण के क्या नियम हैं?",
-                "⚖️ बीआईएस अधिनियम धारा 29 के तहत फर्जी मार्क पर क्या सजा है?",
-                "🌱 पर्यावरण अनुकूल उत्पादों के लिए इको मार्क (ECO Mark) क्या है?",
+                "छोटे व्यवसाय (MSME) बीआईएस प्रमाणन प्रक्रिया कैसे शुरू करें?",
+                "लाइसेंस समाप्त होने से पहले नवीनीकरण के क्या नियम हैं?",
+                "बीआईएस अधिनियम धारा 29 के तहत फर्जी मार्क पर क्या सजा है?",
+                "पर्यावरण अनुकूल उत्पादों के लिए इको मार्क (ECO Mark) क्या है?",
             ]
         else:
             return [
-                "💰 बीआईएस प्रमाणन शुल्क संरचना और एमएसएमई छूट क्या है?",
-                "📱 बीआईएस केयर ऐप पर उत्पाद लाइसेंस कैसे सत्यापित करें?",
-                "🏭 फैक्ट्री निरीक्षण और ऑडिट के दौरान क्या जांचा जाता है?",
-                "📋 मानकॉन्लाइन पोर्टल पर ऑनलाइन आवेदन के चरण क्या हैं?",
+                "बीआईएस प्रमाणन शुल्क संरचना और एमएसएमई छूट क्या है?",
+                "बीआईएस केयर ऐप पर उत्पाद लाइसेंस कैसे सत्यापित करें?",
+                "फैक्ट्री निरीक्षण और ऑडिट के दौरान क्या जांचा जाता है?",
+                "मानकॉन्लाइन पोर्टल पर ऑनलाइन आवेदन के चरण क्या हैं?",
             ]
     else:
         if "1417" in std or "2112" in std or "hallmark" in q_lower or "jewel" in q_lower or "gold" in q_lower or "silver" in q_lower:
             return [
-                "🔍 How to verify the 6-digit HUID code on BIS Care App?",
-                "🏪 How does a jeweller register for hallmarking on Manakonline?",
-                "⚖️ What are the mandatory hallmarking exemptions under 2 grams?",
-                "📋 What tests are conducted at an Assaying & Hallmarking Centre (AHC)?",
+                "How to verify the 6-digit HUID code on BIS Care App?",
+                "How does a jeweller register for hallmarking on Manakonline?",
+                "What are the mandatory hallmarking exemptions under 2 grams?",
+                "What tests are conducted at an Assaying & Hallmarking Centre (AHC)?",
             ]
         elif std and std != "Non-Mandatory / Voluntary":
             return [
-                f"💰 What are the application, testing & marking fees for {std}?",
-                f"📋 What documents and factory audit steps are required for {std}?",
-                f"⚖️ Is {std} mandatory under a Quality Control Order (QCO)?",
-                f"🔄 What is the renewal procedure before {std} licence expiry?",
+                f"What are the application, testing & marking fees for {std}?",
+                f"What documents and factory audit steps are required for {std}?",
+                f"Is {std} mandatory under a Quality Control Order (QCO)?",
+                f"What is the renewal procedure before {std} licence expiry?",
             ]
         elif "isi" in q_lower or "crs" in q_lower or "scheme" in q_lower or "msme" in q_lower:
             return [
-                "🏢 How should an MSME or startup begin the BIS certification process?",
-                "🔄 What is the renewal procedure and grace period for licences?",
-                "⚖️ What are the penalties under Section 29 of the BIS Act for misuse?",
-                "🌱 What is Scheme-X and how does it apply to machinery?",
+                "How should an MSME or startup begin the BIS certification process?",
+                "What is the renewal procedure and grace period for licences?",
+                "What are the penalties under Section 29 of the BIS Act for misuse?",
+                "What is Scheme-X and how does it apply to machinery?",
             ]
         else:
             return [
-                "💰 What is the fee structure and MSME concession for BIS certification?",
-                "📱 How to verify licence authenticity on the BIS Care App?",
-                "🏭 What happens during a BIS factory audit and inspection?",
-                "📋 What are the step-by-step procedures on Manakonline?",
+                "What is the fee structure and MSME concession for BIS certification?",
+                "How to verify licence authenticity on the BIS Care App?",
+                "What happens during a BIS factory audit and inspection?",
+                "What are the step-by-step procedures on Manakonline?",
             ]
 
 
@@ -846,9 +939,19 @@ def call_groq(question, hits, lang="en", api_key=None, model=None, chat_history=
         "for electronics/IT with R-number based on lab test reports), Scheme-IV (Hallmarking with 6-digit HUID), Scheme-X (low-risk machinery), and FMCS.\n"
         "5. CONSUMER TOOLS: Mention the official BIS Care Mobile App for verifying licences/HUID and filing complaints.\n"
         "6. NEXT STEPS: When relevant, outline practical next steps for the user (e.g. testing in BIS recognized labs, applying on manakonline.in).\n"
-        "7. STRUCTURED OUTPUT: Begin every relevant response with this exact structured block:\n"
+        "7. STRUCTURED STANDARD CARD POLICY (SMART TRIGGERING):\n"
+        "Only begin your response with the [STANDARD_CARD]...[END_STANDARD_CARD] block if:\n"
+        "  - The user is inquiring about a product, material, or Indian Standard for the first time.\n"
+        "  - OR the user explicitly requests the Indian Standard number, specification, or card.\n"
+        "  - OR the user introduces a new product/standard that was not previously discussed.\n"
+        "DO NOT include [STANDARD_CARD] if:\n"
+        "  - The user is asking a conversational follow-up question (e.g. fees, costs, MSME discounts, application steps, "
+        "factory audit / SIT inspection, testing parameters, licence renewal, Section 29 penalties, complaints, or comparison) "
+        "on a product or standard already being discussed.\n"
+        "  - In such follow-up cases, do NOT produce [STANDARD_CARD] tags. Start directly with your conversational response.\n"
+        "Format when [STANDARD_CARD] IS required:\n"
         "[STANDARD_CARD]\n"
-        "IS_NUMBER: <Exact IS number e.g. 'IS 15298 (Part 2)', 'IS 15683', 'IS 1786', or 'Non-Mandatory / Voluntary' if not compulsory>\n"
+        "IS_NUMBER: <Exact IS number e.g. 'IS 15298 (Part 2)', 'IS 15683', 'IS 1786', or 'Non-Mandatory / Voluntary'>\n"
         "TITLE: <Formal standard title>\n"
         "DEFINITION: <1-2 clear sentences explaining what this standard covers and its purpose>\n"
         "GIVEN_TO: <Comma-separated list of items this standard is given to / applies to>\n"
@@ -856,9 +959,20 @@ def call_groq(question, hits, lang="en", api_key=None, model=None, chat_history=
         "SCHEME: <Scheme-I (ISI Mark) | Scheme-II (CRS) | Scheme-IV (Hallmarking) | Scheme-X | Voluntary>\n"
         "STATUS: <Mandatory under QCO | Voluntary / Non-Compulsory>\n"
         "[END_STANDARD_CARD]\n\n"
-        "8. CONCISENESS & COMPLETENESS: Be concise, direct, structured, and punchy. Avoid repetitive filler. "
+        "8. CHAT-LIKE RESPONSE & MARKDOWN TABLES (HIGH QUALITY):\n"
+        "Make your responses conversational, engaging, structured, and authoritative. "
+        "When explaining fee structures, multi-step procedures, comparison between schemes/standards, or testing criteria, "
+        "summarize the essential data using a clean, well-formatted Markdown table with headers "
+        "(e.g., | Category / Parameter | Details / Specification | Official Provision |). "
+        "Ensure tables are fully closed and formatted cleanly with markdown pipes.\n\n"
+        "9. COMPLETE RAG GROUNDING:\n"
+        "You must ground your answers deeply and completely in the provided 'Verified Seed Knowledge Base Context'. "
+        "Cite specific clauses, official portal steps (manakonline.in), CM/L licence guidelines, SIT requirements, "
+        "and statutory provisions (e.g. BIS Act Section 29, 50% MSME fee concessions) from the context.\n\n"
+        "10. CONCISENESS & COMPLETENESS: Be concise, direct, structured, and punchy. Avoid repetitive filler. "
         "ALWAYS fully conclude and complete every sentence, list item, step, and table. NEVER stop abruptly mid-sentence.\n\n"
-        f"9. LANGUAGE: {'Respond in clear, professional Hindi (हिंदी).' if lang == 'hi' else 'Respond in clear English.'}\n\n"
+        f"11. LANGUAGE: {'Respond in clear, professional Hindi (हिंदी).' if lang == 'hi' else 'Respond in clear English.'}\n\n"
+        "12. NO EMOJIS (INSTITUTIONAL TONE): Do NOT use emojis in your responses, headers, bullet points, or tables. Maintain a clean, official Bureau of Indian Standards public advisory tone.\n\n"
         "STRICT REFUSAL RULE FOR UNRELATED QUERIES:\n"
         "If the user asks about topics completely unrelated to Indian standards, product manufacturing/safety, BIS certification, "
         "testing, or consumer quality (e.g. sports scores, entertainment/movies, restaurant/cooking recipes, weather, general investment/crypto, "
@@ -870,7 +984,7 @@ def call_groq(question, hits, lang="en", api_key=None, model=None, chat_history=
     user_prompt = (
         f"Verified Seed Knowledge Base Context:\n{context_str}\n\n"
         f"User Question: {question}\n\n"
-        "Provide a concise, complete, and authoritative BIS response with [STANDARD_CARD] at the top:"
+        "Provide an authoritative, well-structured BIS response (include [STANDARD_CARD] only if this is an initial standard/product inquiry):"
     )
 
     candidate_models = [target_model] + [m for m in GROQ_FALLBACK_MODELS if m != target_model]
@@ -973,7 +1087,7 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, ch
     """
     Main answering orchestrator with dynamic AI, multi-key failover,
     specialized category agent persona, multi-turn conversational context,
-    and automatic offline database fallback.
+    intelligent standard card analysis, and automatic offline database fallback.
     """
     # 1. Dataset-only mode explicitly requested
     if mode in ("dataset", "local", "grounded"):
@@ -989,7 +1103,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, ch
                 "follow_up_suggestions": generate_follow_up_suggestions(None, question, lang=lang),
             }
         ans = grounded_answer(hits, lang)
-        card = extract_standard_card(ans, hits, question, lang=lang)
+        should_card = should_include_standard_card(question, chat_history, hits)
+        card = extract_standard_card(ans, hits, question, lang=lang) if should_card else None
         return {
             "answer": ans,
             "citations": build_citations(hits),
@@ -1031,7 +1146,12 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, ch
 
             initial_citations = build_citations(hits)
             all_citations = extract_dynamic_citations(ai_text, initial_citations)
-            card = extract_standard_card(ai_text, hits, question, lang=lang)
+            
+            # Analyze whether this turn warrants a formal standard card
+            should_card = should_include_standard_card(
+                question, chat_history, hits, raw_ai_has_card=("[STANDARD_CARD]" in ai_text)
+            )
+            card = extract_standard_card(ai_text, hits, question, lang=lang) if should_card else None
             cleaned_text = clean_card_tags(ai_text)
             follow_ups = generate_follow_up_suggestions(card, question, lang=lang)
 
@@ -1067,7 +1187,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, ch
     # 3. Fallback to local dataset (when mode == "auto" and AI was unavailable or failed)
     if hits:
         ans = grounded_answer(hits, lang)
-        card = extract_standard_card(ans, hits, question, lang=lang)
+        should_card = should_include_standard_card(question, chat_history, hits)
+        card = extract_standard_card(ans, hits, question, lang=lang) if should_card else None
         return {
             "answer": ans,
             "citations": build_citations(hits),
@@ -1082,7 +1203,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, ch
         }
 
     # If asking about an item not in seed, synthesize non-mandatory or scope card if appropriate
-    fallback_card = extract_standard_card("", hits, question, lang=lang)
+    should_card = should_include_standard_card(question, chat_history, hits)
+    fallback_card = extract_standard_card("", hits, question, lang=lang) if should_card else None
     return {
         "answer": NO_ANSWER.get(lang, NO_ANSWER["en"]),
         "citations": [],

@@ -118,9 +118,10 @@ def handle_ask(payload, header_api_key=None):
     mode = payload.get("mode", "auto")
     api_key = payload.get("api_key") or header_api_key
 
-    # Conversational RAG: Contextual query reformulation for follow-up questions
+    # Conversational Complete RAG: Contextual query reformulation and multi-faceted search
     retriever_query = question
     q_lower = question.lower()
+    ctx = ""
     if chat_history and (any(w in q_lower for w in RELATIVE_WORDS) or len(question.split()) <= 4):
         ctx = extract_context_keywords(chat_history)
         if ctx:
@@ -131,7 +132,20 @@ def handle_ask(payload, header_api_key=None):
         stds_hint = " ".join(agent.get("standards", []))
         retriever_query = f"{retriever_query} {stds_hint}"
 
-    hits = RETRIEVER.search(retriever_query, top_k=3)
+    hits = RETRIEVER.search(retriever_query, top_k=5)
+
+    # If conversational context is present, also retrieve direct question and context separately,
+    # merging deduplicated chunks to ensure both standard specs and procedural guidance are fully covered
+    if ctx:
+        extra_hits = RETRIEVER.search(question, top_k=3) + RETRIEVER.search(ctx, top_k=2)
+        seen_ids = {h["entry"]["id"]: h for h in hits}
+        for h in extra_hits:
+            eid = h["entry"]["id"]
+            if eid not in seen_ids:
+                seen_ids[eid] = h
+                hits.append(h)
+        hits.sort(key=lambda x: x.get("score", 0), reverse=True)
+        hits = hits[:6]
     result = compose(
         question=question,
         hits=hits,

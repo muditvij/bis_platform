@@ -395,6 +395,10 @@ STANDARDS_DOC_MAP = {
         "url": "https://archive.org/details/gov.in.is.2112.2014",
         "title": "BIS Official Standard - IS 2112 : 2014 (Silver Hallmarking)",
     },
+    "IS 2112 (Silver Hallmarking)": {
+        "url": "https://archive.org/details/gov.in.is.2112.2014",
+        "title": "BIS Official Standard - IS 2112 : 2014 (Silver Hallmarking)",
+    },
 }
 
 
@@ -708,10 +712,87 @@ def grounded_answer(hits, lang="en"):
     return "\n".join(parts)
 
 
-def call_groq(question, hits, lang="en", api_key=None, model=None):
+def generate_follow_up_suggestions(card, question, lang="en"):
+    """
+    Generates dynamic, contextually relevant follow-up query suggestions
+    based on the retrieved standard, scheme, and user inquiry.
+    """
+    std = (card.get("standard") or "").strip() if card else ""
+    q_lower = (question or "").lower()
+
+    if lang == "hi":
+        if "1417" in std or "2112" in std or "हॉलमार्क" in q_lower or "hallmark" in q_lower:
+            return [
+                "🔍 बीआईएस केयर ऐप पर HUID कोड कैसे चेक करें?",
+                "🏪 ज्वैलर मानकॉन्लाइन (Manakonline) पर पंजीकरण कैसे करें?",
+                "⚖️ 2 ग्राम से कम वजन के आभूषणों पर क्या छूट है?",
+                "📋 हॉलमार्किंग के लिए एएचसी (AHC) केंद्र में कौन से परीक्षण होते हैं?",
+            ]
+        elif std and std != "Non-Mandatory / Voluntary":
+            return [
+                f"💰 {std} के लिए आवेदन, परीक्षण और मार्किंग शुल्क कितना है?",
+                f"📋 {std} के लिए फैक्ट्री ऑडिट और आवश्यक दस्तावेजों की सूची क्या है?",
+                f"⚖️ क्या {std} के तहत गुणवत्ता नियंत्रण आदेश (QCO) अनिवार्य है?",
+                f"🔄 {std} लाइसेंस की वैधता और नवीनीकरण प्रक्रिया क्या है?",
+            ]
+        elif "isi" in q_lower or "crs" in q_lower or "योजना" in q_lower or "scheme" in q_lower:
+            return [
+                "🏢 छोटे व्यवसाय (MSME) बीआईएस प्रमाणन प्रक्रिया कैसे शुरू करें?",
+                "🔄 लाइसेंस समाप्त होने से पहले नवीनीकरण के क्या नियम हैं?",
+                "⚖️ बीआईएस अधिनियम धारा 29 के तहत फर्जी मार्क पर क्या सजा है?",
+                "🌱 पर्यावरण अनुकूल उत्पादों के लिए इको मार्क (ECO Mark) क्या है?",
+            ]
+        else:
+            return [
+                "💰 बीआईएस प्रमाणन शुल्क संरचना और एमएसएमई छूट क्या है?",
+                "📱 बीआईएस केयर ऐप पर उत्पाद लाइसेंस कैसे सत्यापित करें?",
+                "🏭 फैक्ट्री निरीक्षण और ऑडिट के दौरान क्या जांचा जाता है?",
+                "📋 मानकॉन्लाइन पोर्टल पर ऑनलाइन आवेदन के चरण क्या हैं?",
+            ]
+    else:
+        if "1417" in std or "2112" in std or "hallmark" in q_lower or "jewel" in q_lower or "gold" in q_lower or "silver" in q_lower:
+            return [
+                "🔍 How to verify the 6-digit HUID code on BIS Care App?",
+                "🏪 How does a jeweller register for hallmarking on Manakonline?",
+                "⚖️ What are the mandatory hallmarking exemptions under 2 grams?",
+                "📋 What tests are conducted at an Assaying & Hallmarking Centre (AHC)?",
+            ]
+        elif std and std != "Non-Mandatory / Voluntary":
+            return [
+                f"💰 What are the application, testing & marking fees for {std}?",
+                f"📋 What documents and factory audit steps are required for {std}?",
+                f"⚖️ Is {std} mandatory under a Quality Control Order (QCO)?",
+                f"🔄 What is the renewal procedure before {std} licence expiry?",
+            ]
+        elif "isi" in q_lower or "crs" in q_lower or "scheme" in q_lower or "msme" in q_lower:
+            return [
+                "🏢 How should an MSME or startup begin the BIS certification process?",
+                "🔄 What is the renewal procedure and grace period for licences?",
+                "⚖️ What are the penalties under Section 29 of the BIS Act for misuse?",
+                "🌱 What is Scheme-X and how does it apply to machinery?",
+            ]
+        else:
+            return [
+                "💰 What is the fee structure and MSME concession for BIS certification?",
+                "📱 How to verify licence authenticity on the BIS Care App?",
+                "🏭 What happens during a BIS factory audit and inspection?",
+                "📋 What are the step-by-step procedures on Manakonline?",
+            ]
+
+
+try:
+    from agents_catalog import get_agent_by_id
+except ImportError:
+    try:
+        from backend.agents_catalog import get_agent_by_id
+    except ImportError:
+        get_agent_by_id = lambda x: None
+
+
+def call_groq(question, hits, lang="en", api_key=None, model=None, chat_history=None, agent_id=None):
     """
     Calls AI engine with context grounding, specialized BIS system prompt,
-    and automatic multi-key failover if a key hits rate limits (429) or errors.
+    specialized agent persona injection, multi-turn chat history, and automatic multi-key failover.
     Returns (answer_text, is_refusal, key_info) or raises an exception.
     """
     all_keys = get_all_groq_keys(api_key)
@@ -735,22 +816,37 @@ def call_groq(question, hits, lang="en", api_key=None, model=None):
 
     context_str = "\n\n".join(context_blocks) if context_blocks else "No local seed matches found."
 
+    agent = get_agent_by_id(agent_id) if agent_id else None
+    agent_header = ""
+    if agent:
+        agent_header = (
+            f"\n\nSPECIALIZED AGENT PERSONA ACTIVATED:\n"
+            f"You are the {agent['name']} ({agent.get('scheme', 'BIS Compliance')}).\n"
+            f"Mandate & Role: {agent.get('system_role', '')}\n"
+            f"Primary Relevant Standards: {', '.join(agent.get('standards', []))}.\n"
+            f"Key Diagnostic & Testing Directives: {agent.get('key_tests', '')}.\n"
+        )
+
     system_prompt = (
         "You are BIS Sahayak (बीआईएस सहायक), the official conversational AI assistant for Indian Standards "
         "and Bureau of Indian Standards (BIS) services, under the Department of Consumer Affairs, Government of India "
-        "(Smart India Hackathon Problem Statement 26107).\n\n"
+        "(Smart India Hackathon Problem Statement 26107)."
+        + agent_header + "\n\n"
         "YOUR OBJECTIVES:\n"
         "1. Give authoritative, accurate, and practical guidance on Indian Standards (IS), BIS certification, product quality, "
         "and consumer verification.\n"
-        "2. SPECIFICITY: Always cite the exact Indian Standard number where applicable (e.g. IS 456 for Concrete, IS 10500 for Drinking Water, "
+        "2. CONVERSATIONAL MEMORY: If the user asks a follow-up query using pronouns or relative phrases (e.g. 'What are the fees for this?', "
+        "'How do I apply for it?', 'Is it mandatory?', 'What documents are needed?'), resolve 'this/it' using the ongoing conversation history "
+        "and answer authoritatively for the product/standard currently under discussion.\n"
+        "3. SPECIFICITY: Always cite the exact Indian Standard number where applicable (e.g. IS 456 for Concrete, IS 10500 for Drinking Water, "
         "IS 4151 for Helmets, IS 14543 for Packaged Water, IS 694 for Cables, IS 1786 for TMT Rebars, IS 15298 for Safety Shoes, "
         "IS 1489 for PPC Cement, IS 12269 for OPC 53 Cement, IS 3196 for LPG Cylinders, IS 9873 for Toys, "
-        "IS 15683 for Fire Extinguishers, IS 1417 for Gold Hallmarking, IS 302 for Electrical Appliances, etc.).\n"
-        "3. SCHEME ACCURACY: Clearly distinguish Scheme-I (ISI Mark with CM/L licence & factory audit), Scheme-II (CRS - Compulsory Registration "
+        "IS 15683 for Fire Extinguishers, IS 1417 for Gold Hallmarking, IS 2112 for Silver Hallmarking, IS 302 for Electrical Appliances, etc.).\n"
+        "4. SCHEME ACCURACY: Clearly distinguish Scheme-I (ISI Mark with CM/L licence & factory audit), Scheme-II (CRS - Compulsory Registration "
         "for electronics/IT with R-number based on lab test reports), Scheme-IV (Hallmarking with 6-digit HUID), Scheme-X (low-risk machinery), and FMCS.\n"
-        "4. CONSUMER TOOLS: Mention the official BIS Care Mobile App for verifying licences/HUID and filing complaints.\n"
-        "5. NEXT STEPS: When relevant, outline practical next steps for the user (e.g. testing in BIS recognized labs, applying on manakonline.in).\n"
-        "6. STRUCTURED OUTPUT: Begin every relevant response with this exact structured block:\n"
+        "5. CONSUMER TOOLS: Mention the official BIS Care Mobile App for verifying licences/HUID and filing complaints.\n"
+        "6. NEXT STEPS: When relevant, outline practical next steps for the user (e.g. testing in BIS recognized labs, applying on manakonline.in).\n"
+        "7. STRUCTURED OUTPUT: Begin every relevant response with this exact structured block:\n"
         "[STANDARD_CARD]\n"
         "IS_NUMBER: <Exact IS number e.g. 'IS 15298 (Part 2)', 'IS 15683', 'IS 1786', or 'Non-Mandatory / Voluntary' if not compulsory>\n"
         "TITLE: <Formal standard title>\n"
@@ -760,9 +856,9 @@ def call_groq(question, hits, lang="en", api_key=None, model=None):
         "SCHEME: <Scheme-I (ISI Mark) | Scheme-II (CRS) | Scheme-IV (Hallmarking) | Scheme-X | Voluntary>\n"
         "STATUS: <Mandatory under QCO | Voluntary / Non-Compulsory>\n"
         "[END_STANDARD_CARD]\n\n"
-        "7. CONCISENESS & COMPLETENESS: Be concise, direct, structured, and punchy. Avoid repetitive filler. "
+        "8. CONCISENESS & COMPLETENESS: Be concise, direct, structured, and punchy. Avoid repetitive filler. "
         "ALWAYS fully conclude and complete every sentence, list item, step, and table. NEVER stop abruptly mid-sentence.\n\n"
-        f"8. LANGUAGE: {'Respond in clear, professional Hindi (हिंदी).' if lang == 'hi' else 'Respond in clear English.'}\n\n"
+        f"9. LANGUAGE: {'Respond in clear, professional Hindi (हिंदी).' if lang == 'hi' else 'Respond in clear English.'}\n\n"
         "STRICT REFUSAL RULE FOR UNRELATED QUERIES:\n"
         "If the user asks about topics completely unrelated to Indian standards, product manufacturing/safety, BIS certification, "
         "testing, or consumer quality (e.g. sports scores, entertainment/movies, restaurant/cooking recipes, weather, general investment/crypto, "
@@ -785,12 +881,25 @@ def call_groq(question, hits, lang="en", api_key=None, model=None):
         key_masked = f"...{key[-6:]}" if len(key) >= 6 else "***"
 
         for m in candidate_models:
+            # Multi-turn conversational message construction
+            messages = [{"role": "system", "content": system_prompt}]
+
+            if chat_history and isinstance(chat_history, list):
+                for turn in chat_history[-6:]:
+                    r = turn.get("role")
+                    c = (turn.get("content") or "").strip()
+                    if r in ("user", "assistant") and c:
+                        if r == "assistant" and "[STANDARD_CARD]" in c:
+                            c = re.sub(r"\[STANDARD_CARD\].*?\[END_STANDARD_CARD\]", "", c, flags=re.DOTALL).strip()
+                        if len(c) > 600:
+                            c = c[:600] + "..."
+                        messages.append({"role": r, "content": c})
+
+            messages.append({"role": "user", "content": user_prompt})
+
             payload = {
                 "model": m,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
+                "messages": messages,
                 "temperature": 0.2,
                 "max_tokens": 2500,
             }
@@ -860,9 +969,10 @@ def call_groq(question, hits, lang="en", api_key=None, model=None):
     )
 
 
-def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
+def compose(question, hits, lang="en", mode="auto", api_key=None, model=None, chat_history=None, agent_id=None):
     """
     Main answering orchestrator with dynamic AI, multi-key failover,
+    specialized category agent persona, multi-turn conversational context,
     and automatic offline database fallback.
     """
     # 1. Dataset-only mode explicitly requested
@@ -875,15 +985,20 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
                 "mode": "no_match",
                 "engine": "BIS Verified Database (Local)",
                 "fallback": False,
+                "agent_id": agent_id,
+                "follow_up_suggestions": generate_follow_up_suggestions(None, question, lang=lang),
             }
         ans = grounded_answer(hits, lang)
+        card = extract_standard_card(ans, hits, question, lang=lang)
         return {
             "answer": ans,
             "citations": build_citations(hits),
-            "standard_card": extract_standard_card(ans, hits, question, lang=lang),
+            "standard_card": card,
             "mode": "grounded",
             "engine": "BIS Verified Database (Local)",
             "fallback": False,
+            "agent_id": agent_id,
+            "follow_up_suggestions": generate_follow_up_suggestions(card, question, lang=lang),
         }
 
     # 2. Dynamic AI mode (auto or groq) with Multi-Key Failover
@@ -892,7 +1007,7 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
     if all_keys:
         try:
             ai_text, is_refusal, key_info = call_groq(
-                question, hits, lang=lang, api_key=api_key, model=model
+                question, hits, lang=lang, api_key=api_key, model=model, chat_history=chat_history, agent_id=agent_id
             )
 
             engine_label = "BIS Sahayak AI"
@@ -911,12 +1026,14 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
                     "dynamic": True,
                     "fallback": False,
                     "key_info": key_info,
+                    "follow_up_suggestions": generate_follow_up_suggestions(None, question, lang=lang),
                 }
 
             initial_citations = build_citations(hits)
             all_citations = extract_dynamic_citations(ai_text, initial_citations)
             card = extract_standard_card(ai_text, hits, question, lang=lang)
             cleaned_text = clean_card_tags(ai_text)
+            follow_ups = generate_follow_up_suggestions(card, question, lang=lang)
 
             return {
                 "answer": cleaned_text,
@@ -927,6 +1044,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
                 "dynamic": True,
                 "fallback": False,
                 "key_info": key_info,
+                "agent_id": agent_id,
+                "follow_up_suggestions": follow_ups,
             }
         except Exception as err:
             if mode in ("groq", "grok"):
@@ -938,6 +1057,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
                     "engine": "BIS Sahayak AI (Error)",
                     "dynamic": False,
                     "fallback": False,
+                    "agent_id": agent_id,
+                    "follow_up_suggestions": generate_follow_up_suggestions(None, question, lang=lang),
                 }
             fallback_reason = f"All {len(all_keys)} Groq API key(s) failed or rate-limited ({str(err)}). Switched to offline verified BIS database."
     else:
@@ -946,15 +1067,18 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
     # 3. Fallback to local dataset (when mode == "auto" and AI was unavailable or failed)
     if hits:
         ans = grounded_answer(hits, lang)
+        card = extract_standard_card(ans, hits, question, lang=lang)
         return {
             "answer": ans,
             "citations": build_citations(hits),
-            "standard_card": extract_standard_card(ans, hits, question, lang=lang),
+            "standard_card": card,
             "mode": "grounded",
             "engine": "BIS Verified Database (Offline Fallback)",
             "dynamic": False,
             "fallback": True,
             "fallback_reason": fallback_reason,
+            "agent_id": agent_id,
+            "follow_up_suggestions": generate_follow_up_suggestions(card, question, lang=lang),
         }
 
     # If asking about an item not in seed, synthesize non-mandatory or scope card if appropriate
@@ -968,6 +1092,8 @@ def compose(question, hits, lang="en", mode="auto", api_key=None, model=None):
         "dynamic": False,
         "fallback": True,
         "fallback_reason": fallback_reason,
+        "agent_id": agent_id,
+        "follow_up_suggestions": generate_follow_up_suggestions(fallback_card, question, lang=lang),
     }
 
 

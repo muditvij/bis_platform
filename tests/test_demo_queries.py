@@ -58,12 +58,15 @@ CASES = [
 
     # Yukti - Hallmarking and Consumer
     ("How do I check if my gold jewellery is really hallmarked?", "answer", "hallmark"),
+    ("silver necklace hallmarking 925 sterling", "answer", "2112"),
+    ("what standard applies to silver jewellery", "answer", "2112"),
     ("how do I register as a jeweller for hallmarking", "answer", "jeweller"),
     ("mandatory hallmarking exemptions 2 grams", "answer", "hallmark"),
     ("how to file complaint on BIS care app", "answer", None),
 
     # Mudit - Hindi Queries with Hindi summary and next steps
     ("सोने के आभूषण का हॉलमार्क कैसे जाँचें?", "answer", "hallmark"),
+    ("चाँदी के आभूषणों और गहनों के हॉलमार्क का मानक?", "answer", "2112"),
     ("मैं हेलमेट बनाता हूँ, मुझे कौन सा प्रमाणन चाहिए?", "answer", "4151"),
     ("ISI चिह्न और CRS में क्या अंतर है?", "answer", None),
     ("पेयजल के लिए कौन सा मानक है?", "answer", "10500"),

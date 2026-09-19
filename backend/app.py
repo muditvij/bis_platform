@@ -19,8 +19,9 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 try:
     from PIL import Image
@@ -29,6 +30,8 @@ except ImportError:
     HAS_PIL = False
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
 from answer import (
     INDIC_LANGUAGES,

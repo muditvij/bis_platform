@@ -19,8 +19,9 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 try:
     from PIL import Image
@@ -29,6 +30,8 @@ except ImportError:
     HAS_PIL = False
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
 from answer import (
     INDIC_LANGUAGES,
@@ -37,9 +40,13 @@ from answer import (
     get_groq_model,
     is_groq_configured,
     translate_text,
+    stream_groq,
 )  # noqa: E402
 from retriever import Retriever  # noqa: E402
 from agents_catalog import AGENTS_CATALOG, CATEGORIES_MAP, get_agent_by_id  # noqa: E402
+from rag_engine import rag_engine  # noqa: E402
+from router import route_query_fast  # noqa: E402
+from graph_builder import build_graph_data, find_shortest_path  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -118,6 +125,10 @@ def handle_ask(payload, header_api_key=None):
     mode = payload.get("mode", "auto")
     api_key = payload.get("api_key") or header_api_key
 
+    # 1. Agentic Router (classify intent & agent scope)
+    routing_info = route_query_fast(question, selected_agent_id=agent_id)
+    routed_agent_id = agent_id or (routing_info.get("agent_ids", [None])[0] if routing_info.get("agent_ids") else None)
+
     # Conversational RAG: Contextual query reformulation for follow-up questions
     retriever_query = question
     q_lower = question.lower()
@@ -131,7 +142,39 @@ def handle_ask(payload, header_api_key=None):
         stds_hint = " ".join(agent.get("standards", []))
         retriever_query = f"{retriever_query} {stds_hint}"
 
-    hits = RETRIEVER.search(retriever_query, top_k=3)
+    # 2. Hybrid Retrieval: ChromaDB semantic search + BM25 keyword fallback
+    chroma_results = rag_engine.search(retriever_query, top_k=3, agent_id=routed_agent_id)
+    bm25_hits = RETRIEVER.search(retriever_query, top_k=3)
+
+    hits = []
+    # If ChromaDB returned high-confidence results (score >= 0.5), use them mapped to BM25 format
+    if chroma_results and chroma_results[0]["score"] >= 0.5:
+        retrieval_strategy = "ChromaDB Dense Vector (FastEmbed bge-small-en-v1.5)"
+        for cr in chroma_results:
+            s_id = cr["metadata"].get("skill_id")
+            # Find original entry for full citation links
+            matched_entry = next((e for e in RETRIEVER.entries if e.get("id") == s_id), None)
+            if matched_entry:
+                hits.append({"score": cr["score"], "entry": matched_entry})
+            else:
+                hits.append({
+                    "score": cr["score"],
+                    "entry": {
+                        "id": s_id,
+                        "title": cr["metadata"].get("title"),
+                        "topic": cr["metadata"].get("topic"),
+                        "is_number": cr["metadata"].get("is_number"),
+                        "summary": cr["content"][:300],
+                        "source_title": "BIS Indian Standard",
+                        "source_url": "https://www.services.bis.gov.in/",
+                        "verified": True
+                    }
+                })
+    else:
+        retrieval_strategy = "BM25 Lexical Inverted Index (Fallback)"
+        hits = bm25_hits
+
+    # 3. Answer Generation
     result = compose(
         question=question,
         hits=hits,
@@ -139,12 +182,25 @@ def handle_ask(payload, header_api_key=None):
         mode=mode,
         api_key=api_key,
         chat_history=chat_history,
-        agent_id=agent_id,
+        agent_id=routed_agent_id,
     )
+
+    # 4. Attach Decision Trace
+    result["decision_trace"] = {
+        "intent": routing_info.get("intent", "standard_lookup"),
+        "agent_scope": routing_info.get("agent_ids", []),
+        "router_reasoning": routing_info.get("reasoning", ""),
+        "router_model": routing_info.get("model_used", "llama-3.1-8b-instant"),
+        "retrieval_strategy": retrieval_strategy,
+        "chroma_top_score": chroma_results[0]["score"] if chroma_results else None,
+        "retrieved_count": len(hits),
+        "standards_identified": [h["entry"].get("is_number") for h in hits if h["entry"].get("is_number")]
+    }
+
     result["lang"] = lang
     result["question"] = question
-    if agent_id:
-        result["agent_id"] = agent_id
+    if routed_agent_id:
+        result["agent_id"] = routed_agent_id
     if image_data:
         result["image_data"] = image_data
     if image_name:
@@ -392,6 +448,17 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/agents":
             obj, code = handle_agents()
             return self._send(obj, code)
+        if path == "/api/graph":
+            query_params = urllib.parse.parse_qs(urlparse(self.path).query)
+            ft = query_params.get("filter_type", [None])[0]
+            sq = query_params.get("search", [None])[0]
+            aid = query_params.get("agent_id", [None])[0]
+            return self._send(build_graph_data(filter_type=ft, search_query=sq, agent_id=aid))
+        if path == "/api/graph/path":
+            query_params = urllib.parse.parse_qs(urlparse(self.path).query)
+            src = query_params.get("source", [""])[0]
+            tgt = query_params.get("target", [""])[0]
+            return self._send(find_shortest_path(src, tgt))
         if path in ("/", "/index.html"):
             return self._send_file(os.path.join(FRONTEND, "index.html"), "text/html; charset=utf-8")
         self._send({"error": "not found"}, 404)
@@ -445,12 +512,16 @@ try:
     @api.get("/api/health")
     def health(x_groq_api_key: str | None = Header(default=None)):
         all_keys = get_all_groq_keys(x_groq_api_key)
+        chroma_count = rag_engine.collection.count() if (rag_engine.initialized and rag_engine.collection) else 0
         return {
             "status": "ok",
             "entries": len(RETRIEVER.entries),
             "groq_active": len(all_keys) > 0,
             "groq_keys_count": len(all_keys),
             "model": get_groq_model(),
+            "chroma_active": rag_engine.initialized,
+            "chroma_chunks_indexed": chroma_count,
+            "embedding_model": "BAAI/bge-small-en-v1.5 (ONNX FastEmbed)",
         }
 
     @api.get("/api/config")
@@ -465,9 +536,80 @@ try:
     def agents():
         return handle_agents()[0]
 
+    @api.get("/api/graph")
+    def graph(filter_type: str | None = None, search: str | None = None, agent_id: str | None = None):
+        return build_graph_data(filter_type=filter_type, search_query=search, agent_id=agent_id)
+
+    @api.get("/api/graph/path")
+    def graph_path(source: str, target: str):
+        return find_shortest_path(source, target)
+
     @api.post("/api/ask")
     def ask(body: Ask, x_groq_api_key: str | None = Header(default=None)):
         return handle_ask(body.model_dump(), header_api_key=x_groq_api_key)[0]
+
+    @api.post("/api/ask-stream")
+    async def ask_stream(body: Ask, x_groq_api_key: str | None = Header(default=None)):
+        from fastapi.responses import StreamingResponse
+        payload = body.model_dump()
+        question = (payload.get("question") or "").strip()
+        lang = detect_lang(question, payload.get("lang"))
+        api_key = payload.get("api_key") or x_groq_api_key
+
+        routing_info = route_query_fast(question, selected_agent_id=payload.get("agent_id"))
+        routed_agent_id = payload.get("agent_id") or (routing_info.get("agent_ids", [None])[0] if routing_info.get("agent_ids") else None)
+
+        chroma_res = rag_engine.search(question, top_k=3, agent_id=routed_agent_id)
+        hits = []
+        if chroma_res and chroma_res[0]["score"] >= 0.5:
+            for cr in chroma_res:
+                s_id = cr["metadata"].get("skill_id")
+                entry = next((e for e in RETRIEVER.entries if e.get("id") == s_id), None)
+                if entry:
+                    hits.append({"score": cr["score"], "entry": entry})
+        if not hits:
+            hits = RETRIEVER.search(question, top_k=3)
+
+        trace_data = {
+            "intent": routing_info.get("intent"),
+            "agent_scope": routing_info.get("agent_ids"),
+            "reasoning": routing_info.get("reasoning"),
+            "router_model": routing_info.get("model_used"),
+            "retrieved_count": len(hits)
+        }
+
+        async def event_generator():
+            # First send decision trace event
+            yield f"event: trace\ndata: {json.dumps(trace_data)}\n\n"
+            full_text = []
+            for item in stream_groq(
+                question=question,
+                hits=hits,
+                lang=lang,
+                api_key=api_key,
+                chat_history=payload.get("chat_history"),
+                agent_id=routed_agent_id
+            ):
+                tok = item.get("token", "")
+                full_text.append(tok)
+                yield f"event: token\ndata: {json.dumps({'content': tok})}\n\n"
+            
+            full_content = "".join(full_text)
+            card = extract_standard_card(full_content, hits, question, lang=lang)
+            clean_text = clean_card_tags(full_content)
+            citations = extract_dynamic_citations(full_content, build_citations(hits))
+            follow_ups = generate_follow_up_suggestions(card, question, lang=lang)
+
+            done_payload = {
+                "full_answer": clean_text,
+                "standard_card": card,
+                "citations": citations,
+                "follow_up_suggestions": follow_ups,
+                "engine": "FastEmbed + ChromaDB + Groq"
+            }
+            yield f"event: done\ndata: {json.dumps(done_payload)}\n\n"
+
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     @api.post("/api/translate")
     def translate(body: dict, x_groq_api_key: str | None = Header(default=None)):

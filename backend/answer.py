@@ -46,12 +46,10 @@ def load_env_file():
 load_env_file()
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+DEFAULT_GROQ_MODEL = os.environ.get("GROQ_MODEL_ANSWER", "llama-3.3-70b-versatile")
 GROQ_FALLBACK_MODELS = [
-    "openai/gpt-oss-120b",
-    "openai/gpt-oss-20b",
-    "qwen/qwen3.8-27b",
     "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
 ]
 
 NO_ANSWER = {
@@ -1199,5 +1197,93 @@ def translate_text(text, target_lang="hi", api_key=None, model=None, standard_ca
                 break
 
     return text, standard_card
+
+
+def stream_groq(
+    question,
+    hits,
+    lang="en",
+    api_key=None,
+    model=None,
+    chat_history=None,
+    agent_id=None,
+    agent_persona=None
+):
+    """
+    Generator that streams LLM tokens using Groq OpenAI-compatible SSE.
+    Yields chunks of text as they arrive from Groq API.
+    """
+    all_keys = get_all_groq_keys(api_key)
+    if not all_keys:
+        # Fallback offline mode if no keys
+        offline_resp = compose(question, hits, lang=lang, mode="dataset", agent_id=agent_id)
+        yield {"token": offline_resp.get("answer", "")}
+        return
+
+    key = all_keys[0]
+    target_model = model or DEFAULT_GROQ_MODEL
+    
+    agent_info = None
+    if agent_id:
+        from backend.agents_catalog import get_agent_by_id
+        agent_info = get_agent_by_id(agent_id)
+
+    system_prompt = build_system_prompt(hits, lang=lang, agent_persona=agent_info)
+    user_prompt = build_user_prompt(question, lang=lang, agent_persona=agent_info)
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if chat_history and isinstance(chat_history, list):
+        for turn in chat_history[-6:]:
+            r = turn.get("role")
+            c = (turn.get("content") or "").strip()
+            if r in ("user", "assistant") and c:
+                if r == "assistant" and "[STANDARD_CARD]" in c:
+                    c = re.sub(r"\[STANDARD_CARD\].*?\[END_STANDARD_CARD\]", "", c, flags=re.DOTALL).strip()
+                messages.append({"role": r, "content": c[:600]})
+    messages.append({"role": "user", "content": user_prompt})
+
+    payload = {
+        "model": target_model,
+        "messages": messages,
+        "temperature": 0.2,
+        "max_tokens": 2500,
+        "stream": True,
+    }
+
+    req_data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        GROQ_API_URL,
+        data=req_data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+            "User-Agent": "BIS-Sahayak-Stream/1.0"
+        },
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            for line in resp:
+                line_str = line.decode("utf-8").strip()
+                if not line_str or line_str.startswith(":"):
+                    continue
+                if line_str.startswith("data: "):
+                    data_str = line_str[6:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        token = delta.get("content", "")
+                        if token:
+                            yield {"token": token}
+                    except Exception:
+                        continue
+    except Exception as e:
+        import sys
+        sys.stderr.write(f"[Stream Error] {e}\n")
+        yield {"token": f"\n\n[Stream interrupted: {e}]"}
+
 
 

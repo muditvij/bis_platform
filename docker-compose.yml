@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: bis-api
+    restart: unless-stopped
+    mem_limit: 600m
+    env_file:
+      - .env
+    environment:
+      - CHROMA_PERSIST_DIR=/app/chroma_data
+      - SQLITE_PATH=/app/sqlite_data/bis_metadata.db
+      - GROQ_MODEL_ANSWER=llama-3.3-70b-versatile
+      - GROQ_MODEL_ROUTER=llama-3.1-8b-instant
+    volumes:
+      - chroma_data:/app/chroma_data
+      - sqlite_data:/app/sqlite_data
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2.9-alpine
+    container_name: bis-caddy
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  chroma_data:
+    name: bis_chroma_data
+  sqlite_data:
+    name: bis_sqlite_data
+  caddy_data:
+    name: bis_caddy_data
+  caddy_config:
+    name: bis_caddy_config

@@ -1,0 +1,49 @@
+#cloud-config
+
+package_update: true
+
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - git
+
+runcmd:
+  # 1. Install Docker CE
+  - curl -fsSL https://get.docker.com | sh
+  - systemctl enable docker
+  - systemctl start docker
+
+  # 2. Install Docker Compose Plugin
+  - mkdir -p /usr/local/lib/docker/cli-plugins
+  - curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+  - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+  # 3. Clone repository (User: HST04, Branch: feat/rag-graph-linear)
+  - git clone https://github.com/HST04/bis_platform.git /opt/bis_platform || true
+  - cd /opt/bis_platform && git checkout feat/rag-graph-linear || true
+
+  # 4. Configure .env with Groq API key and models
+  - |
+    cat > /opt/bis_platform/.env << 'ENVEOF'
+    GROQ_API_KEY=__GROQ_API_KEY__
+    GROQ_MODEL_ANSWER=llama-3.3-70b-versatile
+    GROQ_MODEL_ROUTER=llama-3.1-8b-instant
+    CHROMA_PERSIST_DIR=/app/chroma_data
+    SQLITE_PATH=/app/sqlite_data/bis_metadata.db
+    SECRET_KEY=bis_linear_hackathon_demo_key
+    PORT=8000
+    ENVEOF
+
+  # 5. Fetch Public IP & configure Caddy sslip.io host
+  - |
+    PUBLIC_IP=$(curl -s https://api.ipify.org || curl -s http://checkip.amazonaws.com)
+    echo "PUBLIC_IP=${PUBLIC_IP}" >> /opt/bis_platform/.env
+    sed -i "s/*.sslip.io/${PUBLIC_IP}.sslip.io/" /opt/bis_platform/Caddyfile
+
+  # 6. Build and launch Docker Compose stack
+  - cd /opt/bis_platform && docker compose up -d --build
+
+final_message: "BIS Sahayak deployment complete! Access via https://$(curl -s https://api.ipify.org).sslip.io"

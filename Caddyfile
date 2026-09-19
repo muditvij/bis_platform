@@ -1,0 +1,25 @@
+{
+    # Global options
+    auto_https disable_redirects
+}
+
+# Domain served with automatic HTTPS via sslip.io
+# Populated dynamically by cloud-init or set explicitly
+*.sslip.io, :80, :443 {
+    reverse_proxy api:8000
+
+    # Strict performance compression
+    encode gzip zstd
+
+    # Linear security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

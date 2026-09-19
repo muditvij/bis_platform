@@ -4,39 +4,66 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BIS Sahayak - Bureau of Indian Standards Assistant</title>
+<!-- Typography: Inter font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Cytoscape.js & Euler layout for Force-Directed Knowledge Graph -->
+<script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/cytoscape-euler@1.2.2/cytoscape-euler.js"></script>
 <!-- Client-side Computer Vision Engine (Deep Learning Neural Network for Image Content Analysis) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
 <style>
   :root{
-    --ink:#17222B;
-    --ink-soft:#4F5E6B;
-    --ink-subtle:#7A8B99;
-    --paper:#F4F6F5;
-    --card:#FFFFFF;
-    --seal:#0E6A4E;
-    --seal-wash:#E6F1ED;
-    --seal-deep:#084B36;
-    --gold:#9A6408;
-    --gold-wash:#FBF4E7;
-    --gold-border:#EAD7BA;
-    --accent:#1853DB;
-    --accent-wash:#EEF4FE;
-    --line:#DCE1DF;
-    --radius:6px;
-    --radius-sm:4px;
-    --shadow-sm:0 1px 3px rgba(0,0,0,0.05);
-    --shadow-md:0 4px 14px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    /* Linear HIG Design Tokens */
+    --bg-primary: #0A0A0B;
+    --bg-secondary: #111113;
+    --bg-elevated: rgba(255, 255, 255, 0.03);
+    --bg-hover: rgba(255, 255, 255, 0.06);
+
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-default: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --text-primary: #E5E5E5;
+    --text-secondary: rgba(255, 255, 255, 0.60);
+    --text-tertiary: rgba(255, 255, 255, 0.38);
+    --text-disabled: rgba(255, 255, 255, 0.20);
+
+    --accent: #5E6AD2;
+    --accent-hover: #6E7AE2;
+    --accent-subtle: rgba(94, 106, 210, 0.14);
+    --accent-glow: 0 0 16px rgba(94, 106, 210, 0.35);
+
+    /* Legacy mapped tokens */
+    --ink: #E5E5E5;
+    --ink-soft: rgba(255, 255, 255, 0.60);
+    --ink-subtle: rgba(255, 255, 255, 0.38);
+    --paper: #0A0A0B;
+    --card: rgba(255, 255, 255, 0.03);
+    --seal: #5E6AD2;
+    --seal-wash: rgba(94, 106, 210, 0.12);
+    --seal-deep: #4A56BD;
+    --gold: #D29922;
+    --gold-wash: rgba(210, 153, 34, 0.12);
+    --gold-border: rgba(210, 153, 34, 0.25);
+    --accent-wash: rgba(94, 106, 210, 0.12);
+    --line: rgba(255, 255, 255, 0.08);
+
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 8px 32px rgba(0,0,0,0.6);
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;background:#0A0A0B;color:#E5E5E5}
   body{
-    background:var(--paper);
-    color:var(--ink);
-    font:15.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;
+    font:15px/1.6 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing:antialiased;
+    letter-spacing: -0.01em;
   }
-  .wrap{max-width:960px;margin:0 auto;padding:24px 20px 96px}
+  .wrap{max-width:1040px;margin:0 auto;padding:76px 20px 96px}
 
   /* ==========================================================================
      GOVERNMENT AUTHENTICITY & ENTERPRISE PORTAL HEADER
@@ -1931,70 +1958,282 @@
     color: #F8FAFC !important;
   }
 
-  body.dark-mode footer {
-    border-top-color: rgba(255, 255, 255, 0.12) !important;
-    color: #64748B !important;
+  /* ==========================================================================
+     LINEAR HIG DESIGN & GRAPH STYLING
+     ========================================================================== */
+  .linear-glass-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 58px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: rgba(10, 10, 11, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .linear-brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .linear-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #E5E5E5;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+  .linear-logo svg {
+    fill: #5E6AD2;
+    filter: drop-shadow(0 0 8px rgba(94, 106, 210, 0.4));
+  }
+  .linear-tab-nav {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 100px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .linear-tab-btn {
+    background: transparent;
+    border: 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 180ms ease-out;
+  }
+  .linear-tab-btn:hover {
+    color: #E5E5E5;
+  }
+  .linear-tab-btn.active {
+    background: #5E6AD2;
+    color: #FFFFFF;
+    box-shadow: 0 0 14px rgba(94, 106, 210, 0.4);
+  }
+  .linear-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Linear Decision Trace Panel */
+  .decision-trace-box {
+    margin-top: 10px;
+    background: rgba(94, 106, 210, 0.05);
+    border: 1px solid rgba(94, 106, 210, 0.16);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 12px;
+  }
+  .decision-trace-header {
+    padding: 8px 12px;
+    background: rgba(94, 106, 210, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-weight: 550;
+    color: #A5B4FC;
+    user-select: none;
+    transition: background-color 150ms ease-out;
+  }
+  .decision-trace-header:hover {
+    background: rgba(94, 106, 210, 0.14);
+  }
+  .decision-trace-body {
+    padding: 10px 14px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.6;
+    border-top: 1px solid rgba(94, 106, 210, 0.12);
+  }
+  .trace-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(94, 106, 210, 0.2);
+    color: #C7D2FE;
+    margin-right: 6px;
+  }
+
+  /* Knowledge Graph View Container */
+  #graph-view-container {
+    display: none;
+    width: 100%;
+    margin-top: 16px;
+    animation: fadeIn 200ms ease-out forwards;
+  }
+  #graph-view-container.show {
+    display: block;
+  }
+  .graph-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .graph-search-input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #E5E5E5;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    min-width: 240px;
+    outline: none;
+    transition: border-color 150ms ease-out;
+  }
+  .graph-search-input:focus {
+    border-color: #5E6AD2;
+    box-shadow: 0 0 8px rgba(94, 106, 210, 0.3);
+  }
+  .graph-filter-pills {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .graph-pill-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 150ms ease-out;
+  }
+  .graph-pill-btn:hover {
+    color: #E5E5E5;
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .graph-pill-btn.active {
+    background: rgba(94, 106, 210, 0.2);
+    border-color: #5E6AD2;
+    color: #C7D2FE;
+  }
+  .graph-canvas-wrap {
+    display: flex;
+    gap: 16px;
+    height: 600px;
+    position: relative;
+  }
+  #cy {
+    flex: 1;
+    height: 100%;
+    background: #0D0E11;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+  .graph-side-panel {
+    width: 320px;
+    height: 100%;
+    background: #111114;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .graph-panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #E5E5E5;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .graph-panel-meta {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .graph-panel-desc {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.6;
+    flex: 1;
+  }
+  .graph-panel-actions {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-graph-action {
+    background: #5E6AD2;
+    color: #FFF;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+    text-align: center;
+    text-decoration: none;
+  }
+  .btn-graph-action:hover {
+    background: #6E7AE2;
   }
 </style>
 </head>
 <body>
 
-<!-- National Government of India Authenticity Banner -->
-<div class="gov-top-bar">
-  <div class="gov-tricolor">
-    <div class="tc-saffron"></div>
-    <div class="tc-white"></div>
-    <div class="tc-green"></div>
-  </div>
-  <div class="gov-top-inner">
-    <div class="gov-top-left">
-      <span class="gov-emblem-badge">🇮🇳 <span class="gov-text-hi">भारत सरकार</span></span>
-      <span class="gov-sep">|</span>
-      <span class="gov-text-en">Government of India</span>
-      <span class="gov-sep">·</span>
-      <span class="gov-dept">उपभोक्ता मामले, खाद्य और सार्वजनिक वितरण मंत्रालय · Ministry of Consumer Affairs</span>
+<!-- Linear HIG Glassmorphism Navigation Header -->
+<header class="linear-glass-header">
+  <div class="linear-brand-wrap">
+    <div class="linear-logo">
+      <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2L2 7v7c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 4a3 3 0 110 6 3 3 0 010-6zm0 14.8c-3.13-1-5.74-4.22-6.61-7.8.96-.65 2.1-1 3.33-1 .44 0 .86.05 1.28.14v3.66h4v-3.66c.42-.09.84-.14 1.28-.14 1.23 0 2.37.35 3.33 1-.87 3.58-3.48 6.8-6.61 7.8z"/></svg>
+      <span>BIS Sahayak</span>
     </div>
-    <div class="gov-top-right">
-      <span class="gov-qco-ticker"><span class="pulse-green"></span> Mandatory Gazette QCO Directives Live</span>
+    <span id="kbcount" style="font-size:12px;color:rgba(255,255,255,0.4);">68 standards loaded</span>
+  </div>
+
+  <!-- Central Tab Navigation (Chat | Graph | Marketplace) -->
+  <nav class="linear-tab-nav" role="tablist">
+    <button type="button" class="linear-tab-btn active" id="tab-nav-chat" onclick="switchMainTab('chat')">💬 Chat & RAG</button>
+    <button type="button" class="linear-tab-btn" id="tab-nav-graph" onclick="switchMainTab('graph')">🕸️ Knowledge Graph</button>
+    <button type="button" class="linear-tab-btn" id="tab-nav-marketplace" onclick="switchMainTab('marketplace')">🏬 Agent Store</button>
+  </nav>
+
+  <div class="linear-header-right">
+    <div class="readiness-badge ready" id="readiness-badge" style="background:rgba(94,106,210,0.1);border-color:rgba(94,106,210,0.3);color:#C7D2FE;">
+      <span class="readiness-dot" style="background:#5E6AD2;"></span>
+      <span id="readiness-text">🟢 Ready</span>
+    </div>
+    <button type="button" class="btn-settings" id="btn-settings" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#E5E5E5;">⚙️</button>
+    <button type="button" class="btn-new-chat" id="btn-new-chat" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#E5E5E5;padding:5px 12px;border-radius:6px;font-size:12.5px;cursor:pointer;">➕ Clear</button>
+    <div class="lang" role="group" aria-label="Language">
+      <button id="btn-en" aria-pressed="true">EN</button>
+      <button id="btn-hi" aria-pressed="false">HI</button>
     </div>
   </div>
-</div>
+</header>
 
 <div class="wrap">
-
-  <header>
-    <div class="brand">
-      <b>
-        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 2L2 7v7c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 4a3 3 0 110 6 3 3 0 010-6zm0 14.8c-3.13-1-5.74-4.22-6.61-7.8.96-.65 2.1-1 3.33-1 .44 0 .86.05 1.28.14v3.66h4v-3.66c.42-.09.84-.14 1.28-.14 1.23 0 2.37.35 3.33 1-.87 3.58-3.48 6.8-6.61 7.8z"/></svg>
-        भारतीय मानक ब्यूरो · BIS Sahayak
-      </b>
-      <span id="kbcount">56 verified standards loaded</span>
-    </div>
-    <div class="nav-actions">
-      <div class="readiness-badge ready" id="readiness-badge" title="Checking AI & Neural Vision status...">
-        <span class="readiness-dot"></span>
-        <span id="readiness-text">🟢 All Systems Ready</span>
-      </div>
-      <button type="button" class="engine-badge active-live" id="engine-badge" title="AI Assistant Status">
-        <span class="dot"></span>
-        <span id="engine-text">AI Assistant (Live)</span>
-      </button>
-      <button type="button" class="btn-settings" id="btn-settings" title="Settings">
-        ⚙️ Settings
-      </button>
-      <button type="button" class="btn-theme" id="btn-theme" title="Toggle Animated Dark Gradient Mode">
-        <svg viewBox="0 0 24 24" class="theme-icon" width="15" height="15" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
-        <span id="theme-btn-text">Dark Mode</span>
-      </button>
-      <button type="button" class="btn-new-chat" id="btn-new-chat" title="Start a fresh conversation thread">
-        ➕ New Chat
-      </button>
-      <div class="lang" role="group" aria-label="Language">
-        <button id="btn-en" aria-pressed="true">English</button>
-        <button id="btn-hi" aria-pressed="false">हिंदी</button>
-      </div>
-    </div>
-  </header>
 
   <!-- Active Agent Persona Banner -->
   <div class="active-agent-banner" id="active-agent-banner">
@@ -2097,6 +2336,37 @@
         <span>Load More Domain Agents</span>
         <span class="load-more-counter" id="load-more-counter">(Showing 6 of 16) ↓</span>
       </button>
+  </section>
+
+  <!-- Interactive Cytoscape.js Knowledge Graph View -->
+  <section id="graph-view-container">
+    <div class="graph-toolbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="text" id="graph-search" class="graph-search-input" placeholder="🔍 Search standards or topics in graph (e.g. helmet, fire)..." oninput="handleGraphSearch(this.value)">
+        <button type="button" class="graph-pill-btn" onclick="fitGraphView()" title="Fit all nodes to view">🎯 Center View</button>
+      </div>
+      <div class="graph-filter-pills">
+        <span style="font-size:12px;color:rgba(255,255,255,0.4);margin-right:4px;">Filter:</span>
+        <button type="button" class="graph-pill-btn active" id="gfilter-all" onclick="filterGraphNodes('all')">All Nodes</button>
+        <button type="button" class="graph-pill-btn" id="gfilter-skill" onclick="filterGraphNodes('skill')">📜 Standards</button>
+        <button type="button" class="graph-pill-btn" id="gfilter-chunk" onclick="filterGraphNodes('chunk')">🧩 Chunks</button>
+        <button type="button" class="graph-pill-btn" id="gfilter-topic" onclick="filterGraphNodes('topic')">🏷️ Topics</button>
+      </div>
+    </div>
+
+    <div class="graph-canvas-wrap">
+      <div id="cy"></div>
+      <div class="graph-side-panel" id="graph-side-panel">
+        <div class="graph-panel-title" id="gpanel-title">Interactive Graph Explorer</div>
+        <div class="graph-panel-meta" id="gpanel-meta">Click any node in the force-directed graph to inspect standard metadata, similarity connections, and certification scope.</div>
+        <div class="graph-panel-desc" id="gpanel-desc">
+          <p style="color:rgba(255,255,255,0.5);">Tip: Zoom with mousewheel/trackpad, drag nodes, or search standards above. Purple nodes represent official standards, blue nodes represent topics, and glass circles represent content chunks.</p>
+        </div>
+        <div class="graph-panel-actions" id="gpanel-actions" style="display:none;">
+          <button type="button" class="btn-graph-action" id="gpanel-ask-btn">Ask Assistant About This &rarr;</button>
+          <a href="#" target="_blank" rel="noopener" class="btn-graph-action" id="gpanel-portal-link" style="background:rgba(255,255,255,0.06);color:#E5E5E5;">Open BIS Documentation ↗</a>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -2952,51 +3222,51 @@ function applyTranslationToTurnDOM(item, turnId){
 
 function renderInspectionLoader(turnId = 0){
   return `
-    <div class="bis-inspection-loader">
+    <div class="bis-inspection-loader" style="background:rgba(255,255,255,0.02);border:1px solid rgba(94,106,210,0.25);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.6);">
       <div class="loader-top-row">
         <div class="crest-wrap">
-          <div class="crest-spin-ring"></div>
+          <div class="crest-spin-ring" style="border-color:#5E6AD2;border-top-color:transparent;"></div>
           <div class="crest-center">
-            <svg viewBox="0 0 24 24" class="crest-svg"><path d="M12 2L2 7v7c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 4a3 3 0 110 6 3 3 0 010-6zm0 14.8c-3.13-1-5.74-4.22-6.61-7.8.96-.65 2.1-1 3.33-1 .44 0 .86.05 1.28.14v3.66h4v-3.66c.42-.09.84-.14 1.28-.14 1.23 0 2.37.35 3.33 1-.87 3.58-3.48 6.8-6.61 7.8z"/></svg>
+            <svg viewBox="0 0 24 24" class="crest-svg" style="fill:#5E6AD2;"><path d="M12 2L2 7v7c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 4a3 3 0 110 6 3 3 0 010-6zm0 14.8c-3.13-1-5.74-4.22-6.61-7.8.96-.65 2.1-1 3.33-1 .44 0 .86.05 1.28.14v3.66h4v-3.66c.42-.09.84-.14 1.28-.14 1.23 0 2.37.35 3.33 1-.87 3.58-3.48 6.8-6.61 7.8z"/></svg>
           </div>
         </div>
         <div class="loader-title-group">
-          <div class="loader-pretitle">BUREAU OF INDIAN STANDARDS · MULTI-TURN RAG VERIFICATION</div>
-          <div class="loader-main-title">Consulting National Standards Repository</div>
+          <div class="loader-pretitle" style="color:#A5B4FC;font-family:'Inter',sans-serif;letter-spacing:0.06em;">HYBRID RAG RETRIEVAL & VERIFICATION</div>
+          <div class="loader-main-title" style="color:#E5E5E5;font-weight:500;">Searching Vector Knowledge Graph & Grounding Standards</div>
         </div>
       </div>
 
       <div class="loader-steps">
         <div class="loader-step active" id="inspect-step-1-${turnId}">
-          <div class="step-indicator">
-            <span class="dot-pulse"></span>
+          <div class="step-indicator" style="background:#5E6AD2;">
+            <span class="dot-pulse" style="background:#FFFFFF;"></span>
             <svg class="step-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div class="step-text">Retrieving Standards Catalogue & Maintaining Thread Context...</div>
+          <div class="step-text" style="color:#E5E5E5;">1. Router classifying intent via llama-3.1-8b & scoping specialist skills...</div>
         </div>
         <div class="loader-step" id="inspect-step-2-${turnId}">
           <div class="step-indicator">
-            <span class="dot-pulse"></span>
+            <span class="dot-pulse" style="background:#FFFFFF;"></span>
             <svg class="step-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div class="step-text">Synthesizing Mandatory Quality Control Orders (QCO) & Certification Directives...</div>
+          <div class="step-text">2. FastEmbed ONNX computing 384d semantic vectors & querying ChromaDB...</div>
         </div>
         <div class="loader-step" id="inspect-step-3-${turnId}">
           <div class="step-indicator">
-            <span class="dot-pulse"></span>
+            <span class="dot-pulse" style="background:#FFFFFF;"></span>
             <svg class="step-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <div class="step-text">Generating Technical Compliance Directives & Follow-Up Projections...</div>
+          <div class="step-text">3. Synthesizing verified response via llama-3.3-70b-versatile...</div>
         </div>
       </div>
 
-      <div class="loader-progress-bar">
-        <div class="loader-progress-fill"></div>
+      <div class="loader-progress-bar" style="background:rgba(255,255,255,0.06);">
+        <div class="loader-progress-fill" style="background:linear-gradient(90deg, #5E6AD2 0%, #818CF8 100%);"></div>
       </div>
 
-      <div class="loader-footer">
-        <span>Ministry of Consumer Affairs · Smart India Hackathon Problem 26107</span>
-        <span class="timer-badge">2.0s Inspection</span>
+      <div class="loader-footer" style="color:rgba(255,255,255,0.4);">
+        <span>Smart India Hackathon 2024 · Problem Statement 26107</span>
+        <span class="timer-badge" style="background:rgba(94,106,210,0.15);color:#C7D2FE;">1.8s Real-Time Inference</span>
       </div>
     </div>
   `;
@@ -3087,6 +3357,31 @@ function renderTurn(data, ms, turnId){
 
   // Answer body container
   html += `<div id="turn-${turnId}-body" class="answer-content">` + parseMarkdown(data.answer) + '</div>';
+
+  // Linear Decision Trace Collapsible Panel
+  if (data.decision_trace){
+    const dt = data.decision_trace;
+    const traceId = `trace-${turnId}`;
+    html += `
+      <div class="decision-trace-box">
+        <div class="decision-trace-header" onclick="toggleTrace('${traceId}')">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span>⚡ AI Decision Trace</span>
+            <span class="trace-badge">${escapeHtml(dt.router_model || "llama-3.1-8b")}</span>
+            <span class="trace-badge">${escapeHtml(dt.intent || "standard_lookup")}</span>
+          </div>
+          <span id="${traceId}-icon" style="font-size:11px;">▶ Expand</span>
+        </div>
+        <div class="decision-trace-body" id="${traceId}" style="display:none;">
+          <div style="margin-bottom:6px;"><b>Routing Reasoning:</b> ${escapeHtml(dt.router_reasoning || "Direct retrieval.")}</div>
+          <div style="margin-bottom:6px;"><b>Retrieval Strategy:</b> <span style="color:#A5B4FC;">${escapeHtml(dt.retrieval_strategy || "Hybrid RAG")}</span></div>
+          ${dt.chroma_top_score ? `<div><b>ChromaDB Semantic Confidence:</b> ${(dt.chroma_top_score * 100).toFixed(1)}%</div>` : ''}
+          ${dt.agent_scope && dt.agent_scope.length ? `<div><b>Specialist Scope:</b> ${escapeHtml(dt.agent_scope.join(", "))}</div>` : ''}
+          ${dt.standards_identified && dt.standards_identified.length ? `<div><b>Grounded Standards:</b> ${escapeHtml(dt.standards_identified.join(", "))}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
 
   // Sources slips
   if (data.citations && data.citations.length){
@@ -3938,6 +4233,307 @@ fetch(API + "/api/topics")
   .catch(() => {
     $("kbcount").textContent = "offline";
   });
+
+// --- Linear HIG Tab & Cytoscape.js Knowledge Graph Controller ---
+let currentMainTab = "chat";
+let cyInstance = null;
+let graphRawData = null;
+let activeGraphFilter = "all";
+
+function switchMainTab(tabName){
+  currentMainTab = tabName;
+  document.querySelectorAll(".linear-tab-btn").forEach(b => b.classList.remove("active"));
+  const activeBtn = document.getElementById(`tab-nav-${tabName}`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  const chatInputContainer = $("chat-input-bar-container");
+  const chatThread = $("chat-thread");
+  const activeAgentBanner = $("active-agent-banner");
+  const searchBox = $("search-box");
+  const chipsLabel = $("chips-label");
+  const chips = $("chips");
+  const marketplaceSec = $("marketplace-section");
+  const graphSec = $("graph-view-container");
+  const headEl = $("head");
+  const subEl = $("sub");
+
+  if (tabName === "chat"){
+    if (chatInputContainer) chatInputContainer.style.display = "block";
+    if (chatThread) chatThread.style.display = "flex";
+    if (activeAgentBanner) activeAgentBanner.style.display = "flex";
+    if (searchBox) searchBox.style.display = "block";
+    if (chipsLabel) chipsLabel.style.display = "block";
+    if (chips) chips.style.display = "flex";
+    if (marketplaceSec) marketplaceSec.style.display = "none";
+    if (graphSec) graphSec.classList.remove("show");
+    if (headEl) headEl.style.display = "block";
+    if (subEl) subEl.style.display = "block";
+  } else if (tabName === "graph"){
+    if (chatInputContainer) chatInputContainer.style.display = "none";
+    if (chatThread) chatThread.style.display = "none";
+    if (activeAgentBanner) activeAgentBanner.style.display = "none";
+    if (searchBox) searchBox.style.display = "none";
+    if (chipsLabel) chipsLabel.style.display = "none";
+    if (chips) chips.style.display = "none";
+    if (marketplaceSec) marketplaceSec.style.display = "none";
+    if (headEl) headEl.style.display = "none";
+    if (subEl) subEl.style.display = "none";
+    if (graphSec) {
+      graphSec.classList.add("show");
+      if (!cyInstance) {
+        initKnowledgeGraph();
+      } else {
+        setTimeout(() => cyInstance.resize(), 50);
+      }
+    }
+  } else if (tabName === "marketplace"){
+    if (chatInputContainer) chatInputContainer.style.display = "none";
+    if (chatThread) chatThread.style.display = "none";
+    if (activeAgentBanner) activeAgentBanner.style.display = "none";
+    if (searchBox) searchBox.style.display = "none";
+    if (chipsLabel) chipsLabel.style.display = "none";
+    if (chips) chips.style.display = "none";
+    if (graphSec) graphSec.classList.remove("show");
+    if (marketplaceSec) marketplaceSec.style.display = "block";
+    if (headEl) headEl.style.display = "none";
+    if (subEl) subEl.style.display = "none";
+  }
+}
+
+async function initKnowledgeGraph(){
+  try {
+    const res = await fetch(API + "/api/graph");
+    graphRawData = await res.json();
+    renderCytoscapeGraph(graphRawData);
+  } catch(err){
+    console.error("Failed to load graph data:", err);
+    $("gpanel-desc").innerHTML = `<span style="color:#CF222E;">Error connecting to graph API: ${err.message}</span>`;
+  }
+}
+
+function renderCytoscapeGraph(data){
+  const container = document.getElementById('cy');
+  if (!container || typeof cytoscape === "undefined") return;
+
+  // Cytoscape styling with Linear palette
+  const cyStyle = [
+    {
+      selector: 'node[type="skill"]',
+      style: {
+        'background-color': '#5E6AD2',
+        'background-opacity': 0.85,
+        'border-width': 1.5,
+        'border-color': 'rgba(255, 255, 255, 0.4)',
+        'label': 'data(label)',
+        'color': '#E5E5E5',
+        'font-size': '11px',
+        'font-family': 'Inter, sans-serif',
+        'text-valign': 'bottom',
+        'text-margin-y': 6,
+        'width': 28,
+        'height': 28,
+        'text-max-width': '110px',
+        'text-wrap': 'ellipsis',
+        'transition-property': 'transform, border-color, background-color',
+        'transition-duration': '150ms'
+      }
+    },
+    {
+      selector: 'node[type="chunk"]',
+      style: {
+        'background-color': 'rgba(255, 255, 255, 0.20)',
+        'border-width': 1,
+        'border-color': 'rgba(255, 255, 255, 0.1)',
+        'width': 12,
+        'height': 12,
+        'label': ''
+      }
+    },
+    {
+      selector: 'node[type="topic"]',
+      style: {
+        'background-color': '#3B82F6',
+        'background-opacity': 0.8,
+        'border-width': 1.5,
+        'border-color': 'rgba(59, 130, 246, 0.5)',
+        'label': 'data(label)',
+        'color': '#E5E5E5',
+        'font-size': '12px',
+        'font-weight': 600,
+        'width': 34,
+        'height': 34,
+        'text-valign': 'bottom',
+        'text-margin-y': 6
+      }
+    },
+    {
+      selector: 'edge',
+      style: {
+        'line-color': 'rgba(94, 106, 210, 0.22)',
+        'width': 1,
+        'curve-style': 'bezier',
+        'target-arrow-shape': 'none'
+      }
+    },
+    {
+      selector: 'edge[type="similar"]',
+      style: {
+        'line-style': 'dashed',
+        'line-dash-pattern': [3, 3],
+        'line-color': 'rgba(94, 106, 210, 0.16)'
+      }
+    },
+    {
+      selector: 'node:selected',
+      style: {
+        'border-color': '#FFFFFF',
+        'border-width': 2.5,
+        'box-shadow': '0 0 16px #5E6AD2'
+      }
+    },
+    {
+      selector: '.path-highlight',
+      style: {
+        'background-color': '#5E6AD2',
+        'line-color': '#5E6AD2',
+        'line-opacity': 0.9,
+        'width': 3,
+        'z-index': 99
+      }
+    }
+  ];
+
+  cyInstance = cytoscape({
+    container: container,
+    elements: {
+      nodes: data.nodes || [],
+      edges: data.edges || []
+    },
+    style: cyStyle,
+    layout: {
+      name: 'euler',
+      springLength: 80,
+      springCoeff: 0.00025,
+      mass: 3,
+      gravity: -1.0,
+      pull: 0.001,
+      dragCoeff: 0.02,
+      timeStep: 20,
+      animate: true,
+      animationDuration: 700,
+      randomize: false
+    }
+  });
+
+  // Node Click Interaction
+  cyInstance.on('tap', 'node', function(evt){
+    const node = evt.target;
+    const d = node.data();
+    showGraphNodeDetails(d);
+  });
+
+  // Node Hover Interaction
+  cyInstance.on('mouseover', 'node', function(evt){
+    evt.target.style({ 'border-width': 2.5, 'border-color': '#5E6AD2' });
+  });
+  cyInstance.on('mouseout', 'node', function(evt){
+    evt.target.removeStyle();
+  });
+}
+
+function showGraphNodeDetails(d){
+  const titleEl = $("gpanel-title");
+  const metaEl = $("gpanel-meta");
+  const descEl = $("gpanel-desc");
+  const actionsEl = $("gpanel-actions");
+  const askBtn = $("gpanel-ask-btn");
+  const portalLink = $("gpanel-portal-link");
+
+  if (titleEl) titleEl.textContent = d.label || d.id;
+  if (metaEl) {
+    metaEl.innerHTML = `
+      <div><b>Type:</b> <span class="trace-badge">${d.type}</span></div>
+      ${d.is_number ? `<div><b>Standard:</b> ${escapeHtml(d.is_number)}</div>` : ''}
+      ${d.topic ? `<div><b>Topic:</b> ${escapeHtml(d.topic)}</div>` : ''}
+      ${d.agent_ids ? `<div><b>Specialists:</b> ${escapeHtml(d.agent_ids.join(", "))}</div>` : ''}
+    `;
+  }
+  if (descEl) {
+    descEl.innerHTML = `<p>${escapeHtml(d.summary || d.content || "Standard technical specification record under BIS compliance catalog.")}</p>`;
+  }
+  if (actionsEl) actionsEl.style.display = "flex";
+
+  if (askBtn){
+    askBtn.onclick = () => {
+      switchMainTab('chat');
+      const q = d.is_number ? `What are the testing requirements, scheme, and scope for ${d.is_number}?` : `Explain ${d.label}`;
+      $("q").value = q;
+      ask(q);
+    };
+  }
+}
+
+function filterGraphNodes(type){
+  activeGraphFilter = type;
+  document.querySelectorAll(".graph-filter-pills button").forEach(b => b.classList.remove("active"));
+  const btn = document.getElementById(`gfilter-${type}`);
+  if (btn) btn.classList.add("active");
+
+  if (!cyInstance) return;
+  if (type === "all"){
+    cyInstance.elements().show();
+  } else {
+    cyInstance.nodes().forEach(n => {
+      if (n.data('type') === type) {
+        n.show();
+      } else {
+        n.hide();
+      }
+    });
+  }
+  cyInstance.layout({ name: 'euler', animate: true, animationDuration: 300 }).run();
+}
+
+function handleGraphSearch(term){
+  if (!cyInstance) return;
+  const q = (term || "").toLowerCase().trim();
+  if (!q){
+    cyInstance.nodes().forEach(n => n.style({ 'background-opacity': n.data('type') === 'chunk' ? 0.2 : 0.85, 'border-width': 1 }));
+    return;
+  }
+  cyInstance.nodes().forEach(n => {
+    const label = (n.data('label') || "").toLowerCase();
+    const id = (n.data('id') || "").toLowerCase();
+    if (label.includes(q) || id.includes(q)){
+      n.style({ 'border-color': '#FFFFFF', 'border-width': 3, 'background-opacity': 1.0 });
+    } else {
+      n.style({ 'background-opacity': 0.1, 'border-width': 0.5 });
+    }
+  });
+}
+
+function fitGraphView(){
+  if (cyInstance) cyInstance.fit(null, 30);
+}
+
+function toggleTrace(traceId){
+  const body = document.getElementById(traceId);
+  const icon = document.getElementById(`${traceId}-icon`);
+  if (!body) return;
+  if (body.style.display === "none"){
+    body.style.display = "block";
+    if (icon) icon.textContent = "▼ Collapse";
+  } else {
+    body.style.display = "none";
+    if (icon) icon.textContent = "▶ Expand";
+  }
+}
+
+// Override button browse agents to switch to Marketplace tab
+const btnBrowse = $("btn-browse-agents");
+if (btnBrowse){
+  btnBrowse.onclick = () => switchMainTab('marketplace');
+}
 
 initTheme();
 applyLang();

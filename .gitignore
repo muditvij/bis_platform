@@ -1,11 +1,27 @@
+# Python bytecode & cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Virtual environments
 .venv/
 venv/
+ENV/
+env/
+
+# Environment Variables & Secrets (Keep .env.example)
 .env
-.DS_Store
+.env.*
+.env*.local
+!.env.example
+
+# Vector databases & local model caches
+chroma_data/
 *.log
+
+# System & IDE files
+.DS_Store
+Thumbs.db
 .idea/
 .vscode/
 .vercel
-.env*

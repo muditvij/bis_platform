@@ -1220,27 +1220,31 @@
   <!-- ======================== TAB 2: KNOWLEDGE GRAPH ======================== -->
   <section id="graph-tab-view">
     <div class="hero-eyebrow">
-      <span>FORCE-DIRECTED NETWORK ARCHITECTURE</span>
-      <span class="tag">CYTOSCAPE EULER</span>
+      <span>NEO4J AURADB KNOWLEDGE GRAPH</span>
+      <span class="tag">CYTOSCAPE FORCE-DIRECTED</span>
     </div>
     
     <h1 class="hero-title" style="font-size:32px;margin-bottom:18px;">
-      <span class="text-white">Grounding knowledge graph.</span>
-      <span class="text-muted">Explore semantic connections across 68 standards, chunks, and topic clusters.</span>
+      <span class="text-white">Relational compliance graph.</span>
+      <span class="text-muted">Explore multi-hop relationships across 395 nodes: Standards, Clauses, Mandatory QCOs, Schemes, and Testing Labs.</span>
     </h1>
 
     <div class="graph-layout-box">
       <div class="graph-header-bar">
         <div class="graph-search-box">
-          <input type="text" class="graph-search-input" id="gsearch-input" placeholder="🔍 Search standards (helmet, fire, gold, rebar)..." oninput="searchGraphNodes(this.value)">
+          <input type="text" class="graph-search-input" id="gsearch-input" placeholder="🔍 Search standards, clauses, labs, schemes..." oninput="searchGraphNodes(this.value)">
           <button type="button" class="btn-outline" onclick="centerGraph()">🎯 Center View</button>
+          <button type="button" class="btn-outline" onclick="loadAndRenderKnowledgeGraph()">🔄 Reload Live</button>
         </div>
 
         <div class="graph-filter-group">
-          <button type="button" class="filter-btn active" id="gbtn-all" onclick="filterGraph('all')">All (142)</button>
-          <button type="button" class="filter-btn" id="gbtn-skill" onclick="filterGraph('skill')">📜 Standards (68)</button>
-          <button type="button" class="filter-btn" id="gbtn-chunk" onclick="filterGraph('chunk')">🧩 Chunks (68)</button>
-          <button type="button" class="filter-btn" id="gbtn-topic" onclick="filterGraph('topic')">🏷️ Topics (6)</button>
+          <button type="button" class="filter-btn active" id="gbtn-all" onclick="filterGraph('all')">All</button>
+          <button type="button" class="filter-btn" id="gbtn-standard" onclick="filterGraph('standard')">📜 Standards</button>
+          <button type="button" class="filter-btn" id="gbtn-scheme" onclick="filterGraph('scheme')">🏛️ Schemes</button>
+          <button type="button" class="filter-btn" id="gbtn-qco" onclick="filterGraph('qco')">⚖️ QCOs</button>
+          <button type="button" class="filter-btn" id="gbtn-clause" onclick="filterGraph('clause')">🔬 Clauses</button>
+          <button type="button" class="filter-btn" id="gbtn-lab" onclick="filterGraph('lab')">🏢 Labs</button>
+          <button type="button" class="filter-btn" id="gbtn-product" onclick="filterGraph('product')">📦 Products</button>
         </div>
       </div>
 
@@ -1542,6 +1546,21 @@ function renderAssistantTurnBody(container, data, turnId) {
   // 2. Synthesized Answer Content (Markdown parsed)
   html += `<div class="answer-markdown">${parseSimpleMarkdown(data.answer || '')}</div>`;
 
+  // Store subgraph data for interactive graph inspection
+  if (data.subgraph && data.subgraph.nodes && data.subgraph.nodes.length) {
+    window[`subgraph_${turnId}`] = data.subgraph;
+    html += `
+      <div style="background:rgba(94,106,210,0.1);border:1px solid rgba(94,106,210,0.3);border-radius:var(--radius-md);padding:8px 14px;margin:12px 0 6px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:12px;color:#C7D2FE;display:flex;align-items:center;gap:6px;">
+          <span>🕸️ <b>Neo4j Graph Traversal:</b> ${data.subgraph.nodes.length} Connected Nodes, ${data.subgraph.edges.length} Relational Edges Resolved</span>
+        </div>
+        <button type="button" class="btn-outline" style="font-size:11px;padding:3px 9px;color:#A5B4FC;border-color:rgba(94,106,210,0.4);" onclick="viewTraversedSubgraph('${turnId}')">
+          Inspect Subgraph in Graph Tab &rarr;
+        </button>
+      </div>
+    `;
+  }
+
   // 3. Technical Decision Trace (Linear inspect drawer)
   if (data.decision_trace) {
     const dt = data.decision_trace;
@@ -1552,14 +1571,22 @@ function renderAssistantTurnBody(container, data, turnId) {
             <span>⚡ AI Execution Trace</span>
             <span class="brand-badge">${escapeHtml(dt.router_model || 'llama-3.1-8b')}</span>
             <span class="brand-badge">${escapeHtml(dt.intent || 'standard_lookup')}</span>
+            ${dt.neo4j_active ? '<span class="brand-badge" style="background:rgba(16,185,129,0.15);color:#34D399;border-color:rgba(16,185,129,0.3);">Neo4j GraphRAG</span>' : ''}
           </div>
           <span id="trace-icon-trace-${turnId}">▼ Show Details</span>
         </div>
         <div class="trace-drawer-content" id="trace-${turnId}">
           <div><b>Routing Intent:</b> ${escapeHtml(dt.intent || '')}</div>
           <div><b>Reasoning:</b> ${escapeHtml(dt.router_reasoning || '')}</div>
-          <div><b>Retrieval Engine:</b> ${escapeHtml(dt.retrieval_strategy || 'ChromaDB + FastEmbed')}</div>
-          ${dt.chroma_top_score ? `<div><b>Cosine Confidence:</b> ${(dt.chroma_top_score * 100).toFixed(1)}%</div>` : ''}
+          <div><b>Retrieval Strategy:</b> ${escapeHtml(dt.retrieval_strategy || 'Neo4j GraphRAG')}</div>
+          ${dt.graph_hops_resolved && dt.graph_hops_resolved.length ? `
+            <div style="margin-top:6px;">
+              <b>Graph Relationships Traversed:</b>
+              <ul style="margin:4px 0 0 16px;color:#C7D2FE;">
+                ${dt.graph_hops_resolved.map(h => `<li>${escapeHtml(h)}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
           ${dt.standards_identified ? `<div><b>Retrieved Standards:</b> ${escapeHtml(dt.standards_identified.join(', '))}</div>` : ''}
         </div>
       </div>
@@ -1645,6 +1672,16 @@ function clearConversation() {
 }
 
 /* --- KNOWLEDGE GRAPH (CYTOSCAPE.JS) --- */
+function viewTraversedSubgraph(turnId) {
+  const turnData = window[`subgraph_${turnId}`];
+  if (turnData && turnData.nodes && turnData.nodes.length) {
+    switchTab('graph');
+    renderCytoscape(turnData);
+    if ($('insp-title')) $('insp-title').textContent = "Query Subgraph Traversal";
+    if ($('insp-desc')) $('insp-desc').innerHTML = "<p style='color:#C7D2FE;'>Displaying live multi-hop relationships traversed in Neo4j AuraDB for this specific question.</p>";
+  }
+}
+
 async function loadAndRenderKnowledgeGraph() {
   try {
     const res = await fetch(API_BASE + "/api/graph");
@@ -1668,19 +1705,90 @@ function renderCytoscape(data) {
     },
     style: [
       {
-        selector: 'node[type="skill"]',
+        selector: 'node[type="standard"], node[type="skill"]',
         style: {
           'background-color': '#5E6AD2',
           'label': 'data(label)',
           'color': '#F7F8F8',
           'font-size': '10px',
+          'font-weight': 600,
           'font-family': 'Inter, sans-serif',
           'text-valign': 'bottom',
           'text-margin-y': 4,
-          'width': 26,
-          'height': 26,
+          'width': 28,
+          'height': 28,
           'text-max-width': '100px',
           'text-wrap': 'ellipsis'
+        }
+      },
+      {
+        selector: 'node[type="scheme"]',
+        style: {
+          'background-color': '#06B6D4',
+          'label': 'data(label)',
+          'color': '#CFFAFE',
+          'font-size': '10px',
+          'font-weight': 600,
+          'width': 24,
+          'height': 24,
+          'text-valign': 'bottom',
+          'text-margin-y': 4
+        }
+      },
+      {
+        selector: 'node[type="qco"]',
+        style: {
+          'background-color': '#F59E0B',
+          'label': 'data(label)',
+          'color': '#FEF3C7',
+          'font-size': '10px',
+          'font-weight': 600,
+          'width': 24,
+          'height': 24,
+          'text-valign': 'bottom',
+          'text-margin-y': 4
+        }
+      },
+      {
+        selector: 'node[type="clause"]',
+        style: {
+          'background-color': '#10B981',
+          'label': 'data(label)',
+          'color': '#D1FAE5',
+          'font-size': '10px',
+          'font-weight': 500,
+          'width': 20,
+          'height': 20,
+          'text-valign': 'bottom',
+          'text-margin-y': 4
+        }
+      },
+      {
+        selector: 'node[type="lab"]',
+        style: {
+          'background-color': '#EC4899',
+          'label': 'data(label)',
+          'color': '#FCE7F3',
+          'font-size': '10px',
+          'font-weight': 500,
+          'width': 22,
+          'height': 22,
+          'text-valign': 'bottom',
+          'text-margin-y': 4
+        }
+      },
+      {
+        selector: 'node[type="product"]',
+        style: {
+          'background-color': '#3B82F6',
+          'label': 'data(label)',
+          'color': '#DBEAFE',
+          'font-size': '10px',
+          'font-weight': 500,
+          'width': 20,
+          'height': 20,
+          'text-valign': 'bottom',
+          'text-margin-y': 4
         }
       },
       {
@@ -1702,8 +1810,8 @@ function renderCytoscape(data) {
           'color': '#FFFFFF',
           'font-size': '11px',
           'font-weight': 600,
-          'width': 32,
-          'height': 32,
+          'width': 30,
+          'height': 30,
           'text-valign': 'bottom',
           'text-margin-y': 5
         }
@@ -1711,19 +1819,37 @@ function renderCytoscape(data) {
       {
         selector: 'edge',
         style: {
-          'line-color': 'rgba(255, 255, 255, 0.08)',
-          'width': 1,
+          'line-color': 'rgba(255, 255, 255, 0.15)',
+          'width': 1.2,
           'curve-style': 'bezier',
-          'target-arrow-shape': 'none'
+          'target-arrow-shape': 'triangle',
+          'target-arrow-color': 'rgba(255, 255, 255, 0.25)',
+          'arrow-scale': 0.8
         }
       },
       {
-        selector: 'edge[type="similar"]',
-        style: {
-          'line-style': 'dashed',
-          'line-dash-pattern': [3, 3],
-          'line-color': 'rgba(94, 106, 210, 0.25)'
-        }
+        selector: 'edge[type="CERTIFIED_UNDER"]',
+        style: { 'line-color': '#06B6D4', 'target-arrow-color': '#06B6D4' }
+      },
+      {
+        selector: 'edge[type="MANDATED_BY"]',
+        style: { 'line-color': '#F59E0B', 'target-arrow-color': '#F59E0B' }
+      },
+      {
+        selector: 'edge[type="HAS_CLAUSE"]',
+        style: { 'line-color': '#10B981', 'target-arrow-color': '#10B981' }
+      },
+      {
+        selector: 'edge[type="TESTED_AT"]',
+        style: { 'line-color': '#EC4899', 'target-arrow-color': '#EC4899' }
+      },
+      {
+        selector: 'edge[type="APPLIES_STANDARD"]',
+        style: { 'line-color': '#3B82F6', 'target-arrow-color': '#3B82F6' }
+      },
+      {
+        selector: 'edge[type="REFERENCES_NORMATIVE"]',
+        style: { 'line-color': '#6366F1', 'target-arrow-color': '#6366F1', 'line-style': 'dashed' }
       },
       {
         selector: 'node:selected',
@@ -1913,7 +2039,13 @@ window.addEventListener('DOMContentLoaded', () => {
     .then(r => r.json())
     .then(d => {
       const el = $('nav-status-text');
-      if (el) el.textContent = `${d.entries || 68} Standards Live`;
+      if (el) {
+        if (d.neo4j_active) {
+          el.innerHTML = `<span style="color:#10B981;font-weight:600;">● Neo4j GraphRAG Active</span>`;
+        } else {
+          el.textContent = `${d.entries || 68} Standards Live`;
+        }
+      }
     })
     .catch(() => {});
 });

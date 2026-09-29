@@ -47,6 +47,7 @@ from agents_catalog import AGENTS_CATALOG, CATEGORIES_MAP, get_agent_by_id  # no
 from rag_engine import rag_engine  # noqa: E402
 from router import route_query_fast  # noqa: E402
 from graph_builder import build_graph_data, find_shortest_path  # noqa: E402
+from neo4j_rag import neo4j_rag_engine  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(ROOT, "frontend")
@@ -142,37 +143,53 @@ def handle_ask(payload, header_api_key=None):
         stds_hint = " ".join(agent.get("standards", []))
         retriever_query = f"{retriever_query} {stds_hint}"
 
-    # 2. Hybrid Retrieval: ChromaDB semantic search + BM25 keyword fallback
-    chroma_results = rag_engine.search(retriever_query, top_k=3, agent_id=routed_agent_id)
-    bm25_hits = RETRIEVER.search(retriever_query, top_k=3)
-
+    # 2. Hybrid Retrieval: Neo4j GraphRAG (AuraDB) -> ChromaDB -> BM25 fallback
     hits = []
-    # If ChromaDB returned high-confidence results (score >= 0.5), use them mapped to BM25 format
-    if chroma_results and chroma_results[0]["score"] >= 0.5:
-        retrieval_strategy = "ChromaDB Dense Vector (FastEmbed bge-small-en-v1.5)"
-        for cr in chroma_results:
-            s_id = cr["metadata"].get("skill_id")
-            # Find original entry for full citation links
-            matched_entry = next((e for e in RETRIEVER.entries if e.get("id") == s_id), None)
-            if matched_entry:
-                hits.append({"score": cr["score"], "entry": matched_entry})
-            else:
-                hits.append({
-                    "score": cr["score"],
-                    "entry": {
-                        "id": s_id,
-                        "title": cr["metadata"].get("title"),
-                        "topic": cr["metadata"].get("topic"),
-                        "is_number": cr["metadata"].get("is_number"),
-                        "summary": cr["content"][:300],
-                        "source_title": "BIS Indian Standard",
-                        "source_url": "https://www.services.bis.gov.in/",
-                        "verified": True
-                    }
-                })
-    else:
-        retrieval_strategy = "BM25 Lexical Inverted Index (Fallback)"
-        hits = bm25_hits
+    subgraph = {"nodes": [], "edges": []}
+    multi_hop_trace = []
+    retrieval_strategy = "BM25 Lexical Inverted Index (Fallback)"
+
+    # Priority 1: Neo4j GraphRAG (Vector + Multi-Hop Graph Traversal) in auto/online mode
+    if mode != "dataset" and neo4j_rag_engine.is_connected:
+        try:
+            neo_res = neo4j_rag_engine.search(retriever_query, top_k=3)
+            if neo_res and neo_res.get("hits") and neo_res["hits"][0]["score"] >= 0.45:
+                hits = neo_res["hits"]
+                subgraph = neo_res.get("subgraph", {"nodes": [], "edges": []})
+                multi_hop_trace = neo_res.get("multi_hop_trace", [])
+                retrieval_strategy = "Neo4j GraphRAG (AuraDB Vector + Multi-Hop Graph Traversal)"
+        except Exception as err:
+            sys.stderr.write(f"Neo4j search failed ({err}), falling back to ChromaDB.\n")
+
+    # Priority 2: ChromaDB Dense Vector
+    if mode != "dataset" and not hits:
+        chroma_results = rag_engine.search(retriever_query, top_k=3, agent_id=routed_agent_id)
+        if chroma_results and chroma_results[0]["score"] >= 0.5:
+            retrieval_strategy = "ChromaDB Dense Vector (FastEmbed bge-small-en-v1.5)"
+            for cr in chroma_results:
+                s_id = cr["metadata"].get("skill_id")
+                matched_entry = next((e for e in RETRIEVER.entries if e.get("id") == s_id), None)
+                if matched_entry:
+                    hits.append({"score": cr["score"], "entry": matched_entry})
+                else:
+                    hits.append({
+                        "score": cr["score"],
+                        "entry": {
+                            "id": s_id,
+                            "title": cr["metadata"].get("title"),
+                            "topic": cr["metadata"].get("topic"),
+                            "is_number": cr["metadata"].get("is_number"),
+                            "summary": cr["content"][:300],
+                            "source_title": "BIS Indian Standard",
+                            "source_url": "https://www.services.bis.gov.in/",
+                            "verified": True
+                        }
+                    })
+
+    # Priority 3: BM25 Lexical Inverted Index (Offline / strict dataset verification mode)
+    if not hits or mode == "dataset":
+        retrieval_strategy = "BM25 Lexical Inverted Index"
+        hits = RETRIEVER.search(retriever_query, top_k=3)
 
     # 3. Answer Generation
     result = compose(
@@ -185,17 +202,21 @@ def handle_ask(payload, header_api_key=None):
         agent_id=routed_agent_id,
     )
 
-    # 4. Attach Decision Trace
+    # 4. Attach Decision Trace and Subgraph
     result["decision_trace"] = {
         "intent": routing_info.get("intent", "standard_lookup"),
         "agent_scope": routing_info.get("agent_ids", []),
         "router_reasoning": routing_info.get("reasoning", ""),
         "router_model": routing_info.get("model_used", "llama-3.1-8b-instant"),
         "retrieval_strategy": retrieval_strategy,
-        "chroma_top_score": chroma_results[0]["score"] if chroma_results else None,
+        "neo4j_active": neo4j_rag_engine.is_connected,
+        "graph_hops_resolved": multi_hop_trace,
         "retrieved_count": len(hits),
         "standards_identified": [h["entry"].get("is_number") for h in hits if h["entry"].get("is_number")]
     }
+
+    result["subgraph"] = subgraph
+    result["multi_hop_trace"] = multi_hop_trace
 
     result["lang"] = lang
     result["question"] = question
@@ -438,6 +459,8 @@ class Handler(BaseHTTPRequestHandler):
                 "groq_active": len(all_keys) > 0,
                 "groq_keys_count": len(all_keys),
                 "model": get_groq_model(),
+                "neo4j_active": neo4j_rag_engine.is_connected,
+                "graph_engine": "Neo4j GraphRAG (AuraDB)" if neo4j_rag_engine.is_connected else "SQLite/Chroma"
             })
         if path == "/api/config":
             obj, code = handle_config(header_key)
@@ -453,11 +476,15 @@ class Handler(BaseHTTPRequestHandler):
             ft = query_params.get("filter_type", [None])[0]
             sq = query_params.get("search", [None])[0]
             aid = query_params.get("agent_id", [None])[0]
+            if neo4j_rag_engine.is_connected:
+                return self._send(neo4j_rag_engine.get_full_graph(filter_type=ft, search_query=sq))
             return self._send(build_graph_data(filter_type=ft, search_query=sq, agent_id=aid))
         if path == "/api/graph/path":
             query_params = urllib.parse.parse_qs(urlparse(self.path).query)
             src = query_params.get("source", [""])[0]
             tgt = query_params.get("target", [""])[0]
+            if neo4j_rag_engine.is_connected:
+                return self._send(neo4j_rag_engine.find_shortest_path(src, tgt))
             return self._send(find_shortest_path(src, tgt))
         if path in ("/", "/index.html"):
             return self._send_file(os.path.join(FRONTEND, "index.html"), "text/html; charset=utf-8")
@@ -519,6 +546,8 @@ try:
             "groq_active": len(all_keys) > 0,
             "groq_keys_count": len(all_keys),
             "model": get_groq_model(),
+            "neo4j_active": neo4j_rag_engine.is_connected,
+            "graph_engine": "Neo4j GraphRAG (AuraDB)" if neo4j_rag_engine.is_connected else "SQLite/Chroma",
             "chroma_active": rag_engine.initialized,
             "chroma_chunks_indexed": chroma_count,
             "embedding_model": "BAAI/bge-small-en-v1.5 (ONNX FastEmbed)",
@@ -538,10 +567,14 @@ try:
 
     @api.get("/api/graph")
     def graph(filter_type: str | None = None, search: str | None = None, agent_id: str | None = None):
+        if neo4j_rag_engine.is_connected:
+            return neo4j_rag_engine.get_full_graph(filter_type=filter_type, search_query=search)
         return build_graph_data(filter_type=filter_type, search_query=search, agent_id=agent_id)
 
     @api.get("/api/graph/path")
     def graph_path(source: str, target: str):
+        if neo4j_rag_engine.is_connected:
+            return neo4j_rag_engine.find_shortest_path(source, target)
         return find_shortest_path(source, target)
 
     @api.post("/api/ask")
